@@ -22,6 +22,13 @@ void InitializeAppConfigDefaults(void) {
     g_AppConfig.notification.display.corner_radius = DEFAULT_NOTIFICATION_CORNER_RADIUS;
     g_AppConfig.notification.display.type = NOTIFICATION_TYPE_CATIME;
     g_AppConfig.notification.display.fullscreen_timeout = TRUE;
+    g_AppConfig.notification.display.fullscreen_opacity = DEFAULT_FS_TIMEOUT_OPACITY;
+    g_AppConfig.notification.display.fullscreen_bgcolor = RGB(0, 0, 0);
+    wcsncpy_s(g_AppConfig.notification.display.fullscreen_fontname,
+              _countof(g_AppConfig.notification.display.fullscreen_fontname),
+              L"Microsoft YaHei", _TRUNCATE);
+    g_AppConfig.notification.display.fullscreen_title_px = DEFAULT_FS_TIMEOUT_TITLE_PX;
+    g_AppConfig.notification.display.fullscreen_msg_px = DEFAULT_FS_TIMEOUT_MSG_PX;
     g_AppConfig.notification.display.window_x = -1;
     g_AppConfig.notification.display.window_y = -1;
     g_AppConfig.notification.sound.volume = DEFAULT_NOTIFICATION_VOLUME;

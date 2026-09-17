@@ -51,8 +51,34 @@ BOOL ConfigWriter_CollectNotification(ConfigItemBuilder* builder) {
                                  notification->display.disabled) ||
         !ConfigWriter_AppendBool(builder, INI_SECTION_NOTIFICATION,
                                  "NOTIFICATION_FULLSCREEN_TIMEOUT",
-                                 notification->display.fullscreen_timeout)) {
+                                 notification->display.fullscreen_timeout) ||
+        !ConfigWriter_AppendInt(builder, INI_SECTION_NOTIFICATION,
+                                "NOTIFICATION_FS_OPACITY",
+                                notification->display.fullscreen_opacity)) {
         return FALSE;
+    }
+    {
+        /* COLORREF -> "RRGGBB" */
+        char hex[16] = "";
+        _snprintf_s(hex, sizeof(hex), _TRUNCATE, "%02X%02X%02X",
+                    GetRValue(notification->display.fullscreen_bgcolor),
+                    GetGValue(notification->display.fullscreen_bgcolor),
+                    GetBValue(notification->display.fullscreen_bgcolor));
+        char fontA[64] = "";
+        WideCharToMultiByte(CP_UTF8, 0, notification->display.fullscreen_fontname, -1,
+                            fontA, sizeof(fontA), NULL, NULL);
+        if (!ConfigWriter_AppendString(builder, INI_SECTION_NOTIFICATION,
+                                       "NOTIFICATION_FS_BGCOLOR", hex) ||
+            !ConfigWriter_AppendString(builder, INI_SECTION_NOTIFICATION,
+                                       "NOTIFICATION_FS_FONTNAME", fontA[0] ? fontA : "Microsoft YaHei") ||
+            !ConfigWriter_AppendInt(builder, INI_SECTION_NOTIFICATION,
+                                    "NOTIFICATION_FS_TITLE_PX",
+                                    notification->display.fullscreen_title_px) ||
+            !ConfigWriter_AppendInt(builder, INI_SECTION_NOTIFICATION,
+                                    "NOTIFICATION_FS_MSG_PX",
+                                    notification->display.fullscreen_msg_px)) {
+            return FALSE;
+        }
     }
 
     return ConfigWriter_AppendInt(builder, INI_SECTION_NOTIFICATION,

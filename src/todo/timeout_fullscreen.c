@@ -16,12 +16,14 @@
 #include <string.h>
 
 #include "todo/timeout_fullscreen.h"
+#include "config.h"
 
 #define TFS_CLASS_DIM L"CatimeTimeoutDimClass"
 #define TFS_TIMER_ID 2101
-#define TFS_DIM_ALPHA 178 /* ~70% */
-#define TFS_TITLE_PX 44
-#define TFS_MSG_PX 24
+/* Fallbacks when config not loaded (defaults mirror config_defaults.h) */
+#define TFS_DIM_ALPHA_FB 178 /* ~70% */
+#define TFS_TITLE_PX_FB 44
+#define TFS_MSG_PX_FB 24
 #define TFS_HINT_PX 15
 
 static HWND g_dim = NULL;
@@ -33,6 +35,12 @@ static wchar_t *g_title = NULL;
 static wchar_t *g_msg = NULL;
 static volatile LONG g_showing = 0;
 static BOOL g_classReg = FALSE;
+/* per-show style snapshot */
+static wchar_t g_fsFont[64] = L"Microsoft YaHei";
+static int g_fsTitlePx = TFS_TITLE_PX_FB;
+static int g_fsMsgPx = TFS_MSG_PX_FB;
+static COLORREF g_fsBg = RGB(0, 0, 0);
+static BYTE g_fsAlpha = TFS_DIM_ALPHA_FB;
 
 static wchar_t *DupStr(const wchar_t *s) {
     if (!s) s = L"";
@@ -42,12 +50,12 @@ static wchar_t *DupStr(const wchar_t *s) {
     return d;
 }
 
-static HFONT MakeFont(int px, BOOL bold) {
+static HFONT MakeFontEx(const wchar_t *name, int px, BOOL bold) {
     return CreateFontW(-px, 0, 0, 0, bold ? FW_BOLD : FW_NORMAL,
                        FALSE, FALSE, FALSE, DEFAULT_CHARSET,
                        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
                        CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE,
-                       L"Microsoft YaHei");
+                       (name && name[0]) ? name : L"Microsoft YaHei");
 }
 
 static void FreeFonts(void) {
@@ -73,6 +81,14 @@ static BOOL CALLBACK UnionMonitors(HMONITOR h, HDC dc, LPRECT r, LPARAM p) {
 
 static LRESULT CALLBACK DimProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     switch (msg) {
+    case WM_ERASEBKGND: {
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+        HBRUSH b = CreateSolidBrush(g_fsBg);
+        FillRect((HDC)wp, &rc, b);
+        DeleteObject(b);
+        return 1;
+    }
     case WM_KEYDOWN:
     case WM_LBUTTONDOWN:
     case WM_RBUTTONDOWN:
@@ -185,9 +201,22 @@ void TimeoutFullscreen_Show(HWND hwndOwner, const wchar_t *title, const wchar_t 
     g_title = DupStr(title);
     g_msg = DupStr(message);
     FreeFonts();
-    g_fTitle = MakeFont(TFS_TITLE_PX, TRUE);
-    g_fMsg = MakeFont(TFS_MSG_PX, FALSE);
-    g_fHint = MakeFont(TFS_HINT_PX, FALSE);
+    /* styled from config (clamped at apply time) */
+    g_fsTitlePx = g_AppConfig.notification.display.fullscreen_title_px;
+    if (g_fsTitlePx <= 0) g_fsTitlePx = TFS_TITLE_PX_FB;
+    g_fsMsgPx = g_AppConfig.notification.display.fullscreen_msg_px;
+    if (g_fsMsgPx <= 0) g_fsMsgPx = TFS_MSG_PX_FB;
+    if (g_AppConfig.notification.display.fullscreen_fontname[0])
+        wcsncpy_s(g_fsFont, _countof(g_fsFont),
+                  g_AppConfig.notification.display.fullscreen_fontname, _TRUNCATE);
+    else
+        wcsncpy_s(g_fsFont, _countof(g_fsFont), L"Microsoft YaHei", _TRUNCATE);
+    g_fsBg = g_AppConfig.notification.display.fullscreen_bgcolor;
+    g_fsAlpha = (BYTE)((g_AppConfig.notification.display.fullscreen_opacity > 0
+                        ? g_AppConfig.notification.display.fullscreen_opacity : 70) * 255 / 100);
+    g_fTitle = MakeFontEx(g_fsFont, g_fsTitlePx, TRUE);
+    g_fMsg = MakeFontEx(g_fsFont, g_fsMsgPx, FALSE);
+    g_fHint = MakeFontEx(g_fsFont, TFS_HINT_PX, FALSE);
 
     MonitorUnion u;
     memset(&u, 0, sizeof(u));
@@ -202,7 +231,7 @@ void TimeoutFullscreen_Show(HWND hwndOwner, const wchar_t *title, const wchar_t 
                             u.rc.left, u.rc.top, fw, fh,
                             hwndOwner, NULL, hInst, NULL);
     if (!g_dim) { InterlockedExchange(&g_showing, 0); return; }
-    SetLayeredWindowAttributes(g_dim, 0, TFS_DIM_ALPHA, LWA_ALPHA);
+    SetLayeredWindowAttributes(g_dim, 0, g_fsAlpha, LWA_ALPHA);
 
     /* card size: width min(720, 80% screen), height from wrapped text */
     int cw = fw * 8 / 10;

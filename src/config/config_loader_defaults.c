@@ -27,4 +27,9 @@ void InitializeDefaultSnapshot(ConfigSnapshot* snapshot) {
     snapshot->notificationFontSize = DEFAULT_NOTIFICATION_FONT_SIZE;
     snapshot->notificationSoundVolume = DEFAULT_NOTIFICATION_VOLUME;
     snapshot->notificationFullscreenTimeout = TRUE;
+    snapshot->notificationFullscreenOpacity = DEFAULT_FS_TIMEOUT_OPACITY;
+    strncpy(snapshot->notificationFullscreenBgColor, "000000", sizeof(snapshot->notificationFullscreenBgColor) - 1);
+    strncpy(snapshot->notificationFullscreenFontName, DEFAULT_FS_TIMEOUT_FONTNAME, sizeof(snapshot->notificationFullscreenFontName) - 1);
+    snapshot->notificationFullscreenTitleSize = DEFAULT_FS_TIMEOUT_TITLE_PX;
+    snapshot->notificationFullscreenMsgSize = DEFAULT_FS_TIMEOUT_MSG_PX;
 }

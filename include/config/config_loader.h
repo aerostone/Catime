@@ -88,6 +88,11 @@ typedef struct {
     int notificationSoundVolume;
     BOOL notificationDisabled;
     BOOL notificationFullscreenTimeout;
+    int notificationFullscreenOpacity;
+    char notificationFullscreenBgColor[16];
+    char notificationFullscreenFontName[64];
+    int notificationFullscreenTitleSize;
+    int notificationFullscreenMsgSize;
     int notificationWindowX;
     int notificationWindowY;
     int notificationWindowWidth;

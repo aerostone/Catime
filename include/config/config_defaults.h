@@ -42,6 +42,16 @@
 /* Stored in the legacy NOTIFICATION_FONT_SIZE key as percent of window height. */
 #define DEFAULT_NOTIFICATION_FONT_SIZE 100
 #define DEFAULT_NOTIFICATION_VOLUME     100
+/* Fullscreen timeout overlay defaults */
+#define DEFAULT_FS_TIMEOUT_OPACITY      70
+#define DEFAULT_FS_TIMEOUT_BGCOLOR      0x000000
+#define DEFAULT_FS_TIMEOUT_FONTNAME     "Microsoft YaHei"
+#define DEFAULT_FS_TIMEOUT_TITLE_PX     44
+#define DEFAULT_FS_TIMEOUT_MSG_PX       24
+#define MIN_FS_TIMEOUT_OPACITY          10
+#define MAX_FS_TIMEOUT_OPACITY          100
+#define MIN_FS_TIMEOUT_FONT_PX          12
+#define MAX_FS_TIMEOUT_FONT_PX          120
 
 /* Validation Ranges */
 #define MIN_OPACITY                     1

@@ -235,6 +235,36 @@ void ApplyNotificationSettings(const ConfigSnapshot* snapshot) {
     g_AppConfig.notification.display.type = snapshot->notificationType;
     g_AppConfig.notification.display.disabled = snapshot->notificationDisabled;
     g_AppConfig.notification.display.fullscreen_timeout = snapshot->notificationFullscreenTimeout;
+    {
+        int op = snapshot->notificationFullscreenOpacity;
+        if (op < MIN_FS_TIMEOUT_OPACITY) op = MIN_FS_TIMEOUT_OPACITY;
+        if (op > MAX_FS_TIMEOUT_OPACITY) op = MAX_FS_TIMEOUT_OPACITY;
+        g_AppConfig.notification.display.fullscreen_opacity = op;
+        /* hex "RRGGBB" (allow leading '#') -> COLORREF int */
+        const char *hx = snapshot->notificationFullscreenBgColor;
+        if (hx && hx[0] == '#') hx++;
+        unsigned long cv = 0;
+        if (hx && hx[0]) {
+            char *end = NULL;
+            cv = strtoul(hx, &end, 16);
+            if (!end || end == hx) cv = 0;
+        }
+        int rr = (int)((cv >> 16) & 0xFF), gg = (int)((cv >> 8) & 0xFF), bb = (int)(cv & 0xFF);
+        g_AppConfig.notification.display.fullscreen_bgcolor = RGB(rr, gg, bb);
+        wchar_t fn[64] = L"Microsoft YaHei";
+        if (snapshot->notificationFullscreenFontName[0])
+            MultiByteToWideChar(CP_UTF8, 0, snapshot->notificationFullscreenFontName, -1, fn, _countof(fn));
+        wcsncpy_s(g_AppConfig.notification.display.fullscreen_fontname,
+                  _countof(g_AppConfig.notification.display.fullscreen_fontname), fn, _TRUNCATE);
+        int tp = snapshot->notificationFullscreenTitleSize;
+        if (tp < MIN_FS_TIMEOUT_FONT_PX) tp = MIN_FS_TIMEOUT_FONT_PX;
+        if (tp > MAX_FS_TIMEOUT_FONT_PX) tp = MAX_FS_TIMEOUT_FONT_PX;
+        g_AppConfig.notification.display.fullscreen_title_px = tp;
+        int mp = snapshot->notificationFullscreenMsgSize;
+        if (mp < MIN_FS_TIMEOUT_FONT_PX) mp = MIN_FS_TIMEOUT_FONT_PX;
+        if (mp > MAX_FS_TIMEOUT_FONT_PX) mp = MAX_FS_TIMEOUT_FONT_PX;
+        g_AppConfig.notification.display.fullscreen_msg_px = mp;
+    }
     g_AppConfig.notification.display.window_x = snapshot->notificationWindowX;
     g_AppConfig.notification.display.window_y = snapshot->notificationWindowY;
     g_AppConfig.notification.display.window_width = snapshot->notificationWindowWidth;

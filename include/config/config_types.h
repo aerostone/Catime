@@ -64,6 +64,11 @@ typedef struct {
     NotificationType type;
     BOOL disabled;
     BOOL fullscreen_timeout;
+    int fullscreen_opacity;
+    int fullscreen_bgcolor;
+    wchar_t fullscreen_fontname[64];
+    int fullscreen_title_px;
+    int fullscreen_msg_px;
     int window_x;
     int window_y;
     int window_width;
