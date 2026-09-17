@@ -831,7 +831,7 @@ jobs:
 
   sign:
     if: >-
-      github.repository == 'vladelaina/Catime' &&
+      github.repository == 'aerostone/Catime' &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main'
     needs: build
@@ -851,7 +851,7 @@ jobs:
       always() &&
       needs.build.result == 'success' &&
       (needs.sign.result == 'success' || needs.sign.result == 'skipped') &&
-      github.repository == 'vladelaina/Catime' &&
+      github.repository == 'aerostone/Catime' &&
       (github.event_name != 'pull_request' ||
        github.event.pull_request.head.repo.full_name == github.repository)
     needs: [build, sign]
@@ -910,7 +910,7 @@ jobs:
   store-package:
     name: package / microsoft-store
     if: >-
-      github.repository == 'vladelaina/Catime' &&
+      github.repository == 'aerostone/Catime' &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
       !contains(needs.build.outputs.version, '-')
@@ -925,10 +925,10 @@ jobs:
         with:
           node-version: '24.18.0'
 
-      - name: Download signed executable
+      - name: Download build executable (signed preferred, unsigned fallback)
         uses: actions/download-artifact@v8
         with:
-          artifact-ids: ${{ needs.sign.outputs.signed-artifact-id }}
+          artifact-ids: ${{ needs.sign.result == 'success' && needs.sign.outputs.signed-artifact-id || needs.build.outputs.artifact-id }}
           path: signed-build
 
       - name: Locate signed executable

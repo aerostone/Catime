@@ -42,7 +42,7 @@ on:
 
 jobs:
   code-signing:
-    if: github.repository == 'vladelaina/Catime'
+    if: github.repository == 'aerostone/Catime'
     runs-on: ubuntu-latest
     permissions:
       contents: read

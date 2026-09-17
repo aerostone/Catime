@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 
-UPSTREAM_GUARD = "github.repository == 'vladelaina/Catime'"
+UPSTREAM_GUARD = "github.repository == 'aerostone/Catime'"
 WORKFLOW_DIRECTORY = Path(__file__).resolve().parents[2] / "workflows"
 
 # Secret access catches current and future publishing integrations by default.

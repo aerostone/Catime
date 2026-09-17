@@ -25,20 +25,23 @@ permissions:
 jobs:
   publish:
     name: package / chocolatey
-    if: github.repository == 'vladelaina/Catime'
+    if: github.repository == 'aerostone/Catime'
     runs-on: windows-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Validate Chocolatey API key
+      - name: Detect Chocolatey API key (skip push when unconfigured)
+        id: choco_key
         shell: pwsh
         env:
           CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
         run: |
           if ([string]::IsNullOrWhiteSpace($env:CHOCOLATEY_API_KEY)) {
-            Write-Output "::error::CHOCOLATEY_API_KEY is required to publish the package."
-            exit 1
+            Write-Output "::warning::CHOCOLATEY_API_KEY is not configured; package push will be skipped (build+test still run)."
+            "configured=false" >> $env:GITHUB_OUTPUT
+          } else {
+            "configured=true" >> $env:GITHUB_OUTPUT
           }
 
       - name: Download signed release executable
@@ -52,7 +55,7 @@ jobs:
             exit 1
           }
 
-          $url = "https://github.com/vladelaina/Catime/releases/download/v$env:VERSION/catime_$env:VERSION.exe"
+          $url = "https://github.com/aerostone/Catime/releases/download/v$env:VERSION/catime_$env:VERSION.exe"
           $outputDirectory = Join-Path $PWD "chocolatey-input"
           $executable = Join-Path $outputDirectory "catime_$env:VERSION.exe"
           New-Item -ItemType Directory -Force -Path $outputDirectory | Out-Null
@@ -124,6 +127,7 @@ jobs:
           exit 0
 
       - name: Push package to Chocolatey Community Repository
+        if: steps.choco_key.outputs.configured == 'true'
         shell: pwsh
         env:
           CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}

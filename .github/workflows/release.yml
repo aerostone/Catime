@@ -111,7 +111,7 @@ jobs:
 
   # Code signing job
   sign:
-    if: github.repository == 'vladelaina/Catime'
+    if: github.repository == 'aerostone/Catime'
     needs: build
     uses: ./.github/workflows/signpath-sign.yml
     with:
@@ -124,7 +124,7 @@ jobs:
 
   virus-total:
     name: security / virustotal
-    if: github.repository == 'vladelaina/Catime'
+    if: github.repository == 'aerostone/Catime'
     needs: [build, sign]
     runs-on: ubuntu-latest
     permissions:
@@ -134,10 +134,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v5
 
-    - name: Download signed release executable
+    - name: Download release executable (signed preferred, unsigned fallback)
       uses: actions/download-artifact@v8
       with:
-        artifact-ids: ${{ needs.sign.outputs.signed-artifact-id }}
+        artifact-ids: ${{ needs.sign.result == 'success' && needs.sign.outputs.signed-artifact-id || needs.build.outputs.artifact-id }}
         path: vt-input
 
     - name: Scan executable with VirusTotal
@@ -174,7 +174,7 @@ jobs:
   # It remains a workflow artifact and is not attached to the GitHub Release.
   store-package:
     if: >-
-      github.repository == 'vladelaina/Catime' &&
+      github.repository == 'aerostone/Catime' &&
       !contains(needs.build.outputs.tag_version, '-')
     needs: [build, sign]
     runs-on: windows-latest
@@ -188,10 +188,10 @@ jobs:
       with:
         node-version: '24.18.0'
 
-    - name: Download signed executable
+    - name: Download release executable (signed preferred, unsigned fallback)
       uses: actions/download-artifact@v8
       with:
-        artifact-ids: ${{ needs.sign.outputs.signed-artifact-id }}
+        artifact-ids: ${{ needs.sign.result == 'success' && needs.sign.outputs.signed-artifact-id || needs.build.outputs.artifact-id }}
         path: ./signed-release
 
     - name: Build Microsoft Store package
@@ -213,24 +213,27 @@ jobs:
 
   # Release job
   release:
-    if: github.repository == 'vladelaina/Catime'
+    if: github.repository == 'aerostone/Catime'
     needs: [build, sign]
     runs-on: ubuntu-latest
     
     steps:
-    - name: Download signed artifact
+    - name: Download release executable (signed preferred, unsigned fallback)
       uses: actions/download-artifact@v8
       with:
-        artifact-ids: ${{ needs.sign.outputs.signed-artifact-id }}
+        artifact-ids: ${{ needs.sign.result == 'success' && needs.sign.outputs.signed-artifact-id || needs.build.outputs.artifact-id }}
         path: ./signed-release
 
-    - name: Validate Winget token
+    - name: Detect Winget token (skip Winget publish when unconfigured)
+      id: winget_token
       env:
         WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
       run: |
         if [ -z "$WINGET_TOKEN" ]; then
-          echo "::error::WINGET_TOKEN is required before creating a release with Winget publishing enabled."
-          exit 1
+          echo "::warning::WINGET_TOKEN is not configured; Winget publishing will be skipped."
+          echo "configured=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "configured=true" >> "$GITHUB_OUTPUT"
         fi
 
     - name: Create GitHub Release
@@ -275,6 +278,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
     - name: Update Winget Package
+      if: steps.winget_token.outputs.configured == 'true'
       uses: vedantmgoyal2009/winget-releaser@v2
       with:
         identifier: VladElaina.Catime
@@ -284,7 +288,9 @@ jobs:
         token: ${{ secrets.WINGET_TOKEN }}
 
   chocolatey:
-    if: github.repository == 'vladelaina/Catime'
+    if: >-
+      github.repository == 'aerostone/Catime' &&
+      needs.release.result == 'success'
     needs: [build, release]
     uses: ./.github/workflows/chocolatey.yml
     with:
