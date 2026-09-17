@@ -231,7 +231,7 @@ jobs:
 
   msvc-analyze:
     name: quality / msvc-analyze
-    runs-on: windows-2025-vs2026
+    runs-on: windows-2025
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -411,7 +411,7 @@ jobs:
 
   windows-asan-smoke:
     name: quality / windows-asan-smoke
-    runs-on: windows-2025-vs2026
+    runs-on: windows-2025
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -537,7 +537,7 @@ jobs:
 
   win32-binary-baseline:
     name: quality / win32-binary-baseline
-    runs-on: windows-2025-vs2026
+    runs-on: windows-2025
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -605,7 +605,7 @@ jobs:
 
   binskim:
     name: quality / binskim
-    runs-on: windows-2025-vs2026
+    runs-on: windows-2025
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
