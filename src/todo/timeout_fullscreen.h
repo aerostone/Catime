@@ -5,7 +5,7 @@
  * Design: a fullscreen WS_POPUP layered dim window (70% black, click-through
  * EXCEPT center dialog) + a centered dialog with 48px+ title text and message.
  * Any key / click on dialog button dismisses. Auto-dismiss after timeoutMs.
- * Disabled by default via config: set [Notification] FULLSCREEN_TIMEOUT=TRUE.
+ * Enabled by default (NOTIFICATION_FULLSCREEN_TIMEOUT=TRUE). Set FALSE to fall back to small toast.
  */
 #ifndef CATIME_TIMEOUT_FULLSCREEN_H
 #define CATIME_TIMEOUT_FULLSCREEN_H
