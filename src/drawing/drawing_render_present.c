@@ -4,6 +4,7 @@
  */
 
 #include "drawing_render_internal.h"
+#include "todo/todo_overlay_draw.h"
 
 void PresentDrawingPaintFrame(PaintFrameContext* frame) {
     if (!frame) return;
@@ -62,6 +63,8 @@ void PresentDrawingPaintFrame(PaintFrameContext* frame) {
     blend.BlendFlags = 0;
     blend.SourceConstantAlpha = alpha;
     blend.AlphaFormat = AC_SRC_ALPHA;
+
+    TodoOverlay_DrawOnMemDC(memDC, rect.right, rect.bottom);
 
     BOOL layeredUpdateSucceeded = TRUE;
     if (!UpdateLayeredWindow(hwnd, hdcScreen, &ptDst, &sizeWnd, memDC, &ptSrc, 0, &blend, ULW_ALPHA)) {

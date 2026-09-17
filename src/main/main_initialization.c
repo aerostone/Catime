@@ -20,6 +20,7 @@
 #include "tray/tray_animation_menu.h"
 #include "tray/tray_menu_font.h"
 #include "tray/tray_menu_theme.h"
+#include "todo/todo_sync.h"
 #include "utils/package_identity.h"
 #include "utils/string_convert.h"
 #include "window/window_desktop_integration.h"
@@ -201,6 +202,14 @@ static void StartAutomaticUpdateCheck(HWND hwnd) {
 BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
     UNREFERENCED_PARAMETER(hInstance);
     UNREFERENCED_PARAMETER(nCmdShow);
+    /* Tweek TODO sync: init from config.ini [Sync] (no-op when disabled/empty). */
+    {
+        char iniA[MAX_PATH] = "";
+        wchar_t iniW[MAX_PATH] = L"";
+        GetConfigPath(iniA, sizeof(iniA));
+        if (iniA[0]) MultiByteToWideChar(CP_UTF8, 0, iniA, -1, iniW, _countof(iniW));
+        TodoSync_Init(hwnd, iniW[0] ? iniW : NULL);
+    }
     InitializeAsyncCaches(hwnd);
     if (!TaskbarMonitor_Initialize(hInstance, hwnd)) {
         LOG_WARNING("Taskbar monitor initialization failed");

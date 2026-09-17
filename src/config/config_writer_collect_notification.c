@@ -48,7 +48,10 @@ BOOL ConfigWriter_CollectNotification(ConfigItemBuilder* builder) {
                                 notification->sound.volume) ||
         !ConfigWriter_AppendBool(builder, INI_SECTION_NOTIFICATION,
                                  "NOTIFICATION_DISABLED",
-                                 notification->display.disabled)) {
+                                 notification->display.disabled) ||
+        !ConfigWriter_AppendBool(builder, INI_SECTION_NOTIFICATION,
+                                 "NOTIFICATION_FULLSCREEN_TIMEOUT",
+                                 notification->display.fullscreen_timeout)) {
         return FALSE;
     }
 

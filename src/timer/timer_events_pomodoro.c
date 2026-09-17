@@ -7,6 +7,7 @@
 #include <wchar.h>
 
 #include "timer_events_internal.h"
+#include "todo/todo_sync.h"
 
 BOOL TimerEvents_AdvancePomodoroState(void) {
     if (pomodoro_initial_times_count == 0) {
@@ -129,6 +130,10 @@ BOOL TimerEvents_HandlePomodoroCompletion(HWND hwnd) {
 
     ShowNotification(hwnd, completionMsg);
     PlayNotificationSound(hwnd);
+    /* Tweek sync: report completed WORK minutes (index 0 of each cycle). */
+    if (completedIndex == 0 && pomodoro_initial_times[0] >= 60) {
+        TodoSync_OnPomodoroComplete(NULL, pomodoro_initial_times[0] / 60);
+    }
 
     /* Preserve the absolute deadline so notification work introduces no drift. */
     int nextDurationSec =

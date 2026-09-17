@@ -234,6 +234,7 @@ void ApplyNotificationSettings(const ConfigSnapshot* snapshot) {
     g_AppConfig.notification.display.font_size = snapshot->notificationFontSize;
     g_AppConfig.notification.display.type = snapshot->notificationType;
     g_AppConfig.notification.display.disabled = snapshot->notificationDisabled;
+    g_AppConfig.notification.display.fullscreen_timeout = snapshot->notificationFullscreenTimeout;
     g_AppConfig.notification.display.window_x = snapshot->notificationWindowX;
     g_AppConfig.notification.display.window_y = snapshot->notificationWindowY;
     g_AppConfig.notification.display.window_width = snapshot->notificationWindowWidth;

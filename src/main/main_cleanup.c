@@ -14,6 +14,7 @@
 #include "log.h"
 #include "markdown/markdown_interactive.h"
 #include "notification.h"
+#include "todo/todo_sync.h"
 #include "plugin/plugin_data.h"
 #include "plugin/plugin_manager.h"
 #include "tray/tray_animation_menu.h"
@@ -22,6 +23,7 @@
 #include "window/window_visual_effects.h"
 
 void CleanupResources(void) {
+    TodoSync_Shutdown();
     CleanupMarkdownInteractive();
     CleanupDrawingRenderCache();
     CleanupDrawingEffects();

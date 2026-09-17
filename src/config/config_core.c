@@ -21,6 +21,7 @@ void InitializeAppConfigDefaults(void) {
     g_AppConfig.notification.display.max_opacity = DEFAULT_NOTIFICATION_MAX_OPACITY;
     g_AppConfig.notification.display.corner_radius = DEFAULT_NOTIFICATION_CORNER_RADIUS;
     g_AppConfig.notification.display.type = NOTIFICATION_TYPE_CATIME;
+    g_AppConfig.notification.display.fullscreen_timeout = FALSE;
     g_AppConfig.notification.display.window_x = -1;
     g_AppConfig.notification.display.window_y = -1;
     g_AppConfig.notification.sound.volume = DEFAULT_NOTIFICATION_VOLUME;
