@@ -313,7 +313,7 @@ jobs:
             -DCATIME_ENABLE_BINARY_HARDENING=OFF `
             -DCATIME_ENABLE_WIN32_RESOURCES=OFF *>&1 | Tee-Object $cfgLog
           if ($LASTEXITCODE -ne 0) {
-            Write-Output "::error::CMake configure failed for build-msvc; tail of $cfgLog:"
+            Write-Output "::error::CMake configure failed for build-msvc; tail of ${cfgLog}:"
             Get-Content $cfgLog | Select-Object -Last 40 | ForEach-Object { Write-Output "COPYABLE CONFIG $_"; Write-Output "::error::CONFIG $_" }
             exit 1
           }
@@ -436,7 +436,7 @@ jobs:
             -DCATIME_ENABLE_BINARY_HARDENING=OFF `
             -DCATIME_ENABLE_WIN32_RESOURCES=OFF *>&1 | Tee-Object $cfgLog
           if ($LASTEXITCODE -ne 0) {
-            Write-Output "::error::CMake configure failed for build-asan; tail of $cfgLog:"
+            Write-Output "::error::CMake configure failed for build-asan; tail of ${cfgLog}:"
             Get-Content $cfgLog | Select-Object -Last 40 | ForEach-Object { Write-Output "COPYABLE CONFIG $_"; Write-Output "::error::CONFIG $_" }
             exit 1
           }
@@ -568,7 +568,7 @@ jobs:
             -DCATIME_WARNINGS_AS_ERRORS=OFF `
             -DCATIME_ENABLE_WIN32_RESOURCES=OFF *>&1 | Tee-Object $cfgLog
           if ($LASTEXITCODE -ne 0) {
-            Write-Output "::error::CMake configure failed for build-win32-baseline; tail of $cfgLog:"
+            Write-Output "::error::CMake configure failed for build-win32-baseline; tail of ${cfgLog}:"
             Get-Content $cfgLog | Select-Object -Last 40 | ForEach-Object { Write-Output "COPYABLE CONFIG $_"; Write-Output "::error::CONFIG $_" }
             exit 1
           }
@@ -648,7 +648,7 @@ jobs:
             -DCATIME_WARNINGS_AS_ERRORS=OFF `
             -DCATIME_ENABLE_WIN32_RESOURCES=OFF *>&1 | Tee-Object $cfgLog
           if ($LASTEXITCODE -ne 0) {
-            Write-Output "::error::CMake configure failed for build-binskim; tail of $cfgLog:"
+            Write-Output "::error::CMake configure failed for build-binskim; tail of ${cfgLog}:"
             Get-Content $cfgLog | Select-Object -Last 40 | ForEach-Object { Write-Output "COPYABLE CONFIG $_"; Write-Output "::error::CONFIG $_" }
             exit 1
           }
