@@ -337,6 +337,24 @@ jobs:
           exit 0
 
       - name: Dump MSVC ResourceCompile config
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path quality-msvc-analyze\build.log) {
+            Get-Content quality-msvc-analyze\build.log | Select-Object -Last 60 | ForEach-Object { Write-Output "COPYABLE BUILD $_"; Write-Output "::error::BUILD $_" }
+          } else {
+            Write-Output "::warning::quality-msvc-analyze build.log not found"
+          }
+
+      - name: Upload quality-msvc-analyze build log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: quality-msvc-analyze-buildlog
+          path: quality-msvc-analyze/build.log
+          if-no-files-found: warn
+
+      - name: Dump MSVC ResourceCompile config
         if: always() && steps.scope.outputs.run == 'true' && steps.build.outputs.binary_exists != 'true'
         shell: pwsh
         run: |
@@ -457,6 +475,24 @@ jobs:
             "binary_exists=false" >> $env:GITHUB_OUTPUT
           }
           exit 0
+
+      - name: Dump ASan ResourceCompile config
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path quality-windows-asan\build.log) {
+            Get-Content quality-windows-asan\build.log | Select-Object -Last 60 | ForEach-Object { Write-Output "COPYABLE BUILD $_"; Write-Output "::error::BUILD $_" }
+          } else {
+            Write-Output "::warning::quality-windows-asan build.log not found"
+          }
+
+      - name: Upload quality-windows-asan build log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: quality-asan-buildlog
+          path: quality-windows-asan/build.log
+          if-no-files-found: warn
 
       - name: Dump ASan ResourceCompile config
         if: always() && steps.build.outputs.binary_exists != 'true'
@@ -591,6 +627,24 @@ jobs:
           exit 0
 
       - name: Dump Win32 ResourceCompile config
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path quality-win32-baseline\build.log) {
+            Get-Content quality-win32-baseline\build.log | Select-Object -Last 60 | ForEach-Object { Write-Output "COPYABLE BUILD $_"; Write-Output "::error::BUILD $_" }
+          } else {
+            Write-Output "::warning::quality-win32-baseline build.log not found"
+          }
+
+      - name: Upload quality-win32-baseline build log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: quality-win32-buildlog
+          path: quality-win32-baseline/build.log
+          if-no-files-found: warn
+
+      - name: Dump Win32 ResourceCompile config
         if: always() && steps.build.outputs.binary_exists != 'true'
         shell: pwsh
         run: |
@@ -669,6 +723,24 @@ jobs:
             "binary_exists=false" >> $env:GITHUB_OUTPUT
           }
           exit 0
+
+      - name: Dump BinSkim ResourceCompile config
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path quality-binskim\build.log) {
+            Get-Content quality-binskim\build.log | Select-Object -Last 60 | ForEach-Object { Write-Output "COPYABLE BUILD $_"; Write-Output "::error::BUILD $_" }
+          } else {
+            Write-Output "::warning::quality-binskim build.log not found"
+          }
+
+      - name: Upload quality-binskim build log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: quality-binskim-buildlog
+          path: quality-binskim/build.log
+          if-no-files-found: warn
 
       - name: Dump BinSkim ResourceCompile config
         if: always() && steps.build.outputs.binary_exists != 'true'
