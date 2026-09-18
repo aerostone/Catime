@@ -65,8 +65,10 @@ BOOL ConfigWriter_CollectNotification(ConfigItemBuilder* builder) {
                     GetGValue(notification->display.fullscreen_bgcolor),
                     GetBValue(notification->display.fullscreen_bgcolor));
         char fontA[64] = "";
-        WideCharToMultiByte(CP_UTF8, 0, notification->display.fullscreen_fontname, -1,
-                            fontA, sizeof(fontA), NULL, NULL);
+        if (!WideCharToMultiByte(CP_UTF8, 0, notification->display.fullscreen_fontname, -1,
+                                 fontA, sizeof(fontA), NULL, NULL)) {
+            fontA[0] = '\0';
+        }
         if (!ConfigWriter_AppendString(builder, INI_SECTION_NOTIFICATION,
                                        "NOTIFICATION_FS_BGCOLOR", hex) ||
             !ConfigWriter_AppendString(builder, INI_SECTION_NOTIFICATION,

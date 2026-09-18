@@ -31,8 +31,10 @@ static void LoadConfigW(void) {
     g_todoSyncPollSec = (int)GetPrivateProfileIntW(L"Sync", L"PollInterval", TODO_POLL_DEFAULT_S, g_todoSyncIniPath);
     if (g_todoSyncPollSec < 15) g_todoSyncPollSec = 15;
     if (g_todoSyncPollSec > 600) g_todoSyncPollSec = 600;
-    WideCharToMultiByte(CP_UTF8, 0, server, -1, g_todoSyncServer, sizeof(g_todoSyncServer), NULL, NULL);
-    WideCharToMultiByte(CP_UTF8, 0, token, -1, g_todoSyncToken, sizeof(g_todoSyncToken), NULL, NULL);
+    if (!WideCharToMultiByte(CP_UTF8, 0, server, -1, g_todoSyncServer, sizeof(g_todoSyncServer), NULL, NULL))
+        g_todoSyncServer[0] = '\0';
+    if (!WideCharToMultiByte(CP_UTF8, 0, token, -1, g_todoSyncToken, sizeof(g_todoSyncToken), NULL, NULL))
+        g_todoSyncToken[0] = '\0';
     /* trim trailing '/' */
     size_t n = strlen(g_todoSyncServer);
     while (n > 0 && g_todoSyncServer[n - 1] == '/') g_todoSyncServer[--n] = '\0';

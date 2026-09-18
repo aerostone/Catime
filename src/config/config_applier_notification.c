@@ -52,8 +52,10 @@ void ApplyNotificationSettings(const ConfigSnapshot* snapshot) {
         int rr = (int)((cv >> 16) & 0xFF), gg = (int)((cv >> 8) & 0xFF), bb = (int)(cv & 0xFF);
         g_AppConfig.notification.display.fullscreen_bgcolor = RGB(rr, gg, bb);
         wchar_t fn[64] = L"Microsoft YaHei";
-        if (snapshot->notificationFullscreenFontName[0])
-            MultiByteToWideChar(CP_UTF8, 0, snapshot->notificationFullscreenFontName, -1, fn, _countof(fn));
+        if (snapshot->notificationFullscreenFontName[0] &&
+            !MultiByteToWideChar(CP_UTF8, 0, snapshot->notificationFullscreenFontName, -1, fn, _countof(fn))) {
+            wcsncpy_s(fn, _countof(fn), L"Microsoft YaHei", _TRUNCATE);
+        }
         wcsncpy_s(g_AppConfig.notification.display.fullscreen_fontname,
                   _countof(g_AppConfig.notification.display.fullscreen_fontname), fn, _TRUNCATE);
         int tp = snapshot->notificationFullscreenTitleSize;

@@ -64,19 +64,20 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
             }
         } else {
             RECT currentRect;
-            GetWindowRect(hwnd, &currentRect);
-            long long deltaX = llabs((long long)currentRect.left -
-                                     snapshot->windowPosX);
-            long long deltaY = llabs((long long)currentRect.top -
-                                     snapshot->windowPosY);
-            if (deltaX > 10 || deltaY > 10) {
-                CLOCK_WINDOW_POS_X = currentRect.left;
-                CLOCK_WINDOW_POS_Y = currentRect.top;
-            } else {
-                CLOCK_WINDOW_POS_X = snapshot->windowPosX;
-                CLOCK_WINDOW_POS_Y = snapshot->windowPosY;
-                SetWindowPos(hwnd, NULL, CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,
-                            0, 0, SWP_NOSIZE | SWP_NOZORDER);
+            if (GetWindowRect(hwnd, &currentRect)) {
+                long long deltaX = llabs((long long)currentRect.left -
+                                         snapshot->windowPosX);
+                long long deltaY = llabs((long long)currentRect.top -
+                                         snapshot->windowPosY);
+                if (deltaX > 10 || deltaY > 10) {
+                    CLOCK_WINDOW_POS_X = currentRect.left;
+                    CLOCK_WINDOW_POS_Y = currentRect.top;
+                } else {
+                    CLOCK_WINDOW_POS_X = snapshot->windowPosX;
+                    CLOCK_WINDOW_POS_Y = snapshot->windowPosY;
+                    SetWindowPos(hwnd, NULL, CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,
+                                0, 0, SWP_NOSIZE | SWP_NOZORDER);
+                }
             }
         }
         BYTE alphaValue = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);

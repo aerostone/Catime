@@ -75,8 +75,8 @@ static HINTERNET OpenVerbRequest(const char *url, const wchar_t *verb,
     char *colon = strchr(host, ':');
     int port = INTERNET_DEFAULT_HTTP_PORT;
     if (colon) { *colon = '\0'; port = atoi(colon + 1); }
-    MultiByteToWideChar(CP_UTF8, 0, host, -1, whost, _countof(whost));
-    MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath, _countof(wpath));
+    if (!MultiByteToWideChar(CP_UTF8, 0, host, -1, whost, _countof(whost))) return NULL;
+    if (!MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath, _countof(wpath))) return NULL;
     HINTERNET hNet = InternetOpenW(L"Catime-TodoSync/1.0", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
     if (!hNet) return NULL;
     HINTERNET hConn = InternetConnectW(hNet, whost, (INTERNET_PORT)port, NULL, NULL, INTERNET_SERVICE_HTTP, 0, 0);

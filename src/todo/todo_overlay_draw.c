@@ -20,7 +20,9 @@ void TodoOverlay_DrawOnMemDC(HDC memDC, int w, int h) {
                              DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
                              CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
                              DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
-    HGDIOBJ oldFont = font ? SelectObject(memDC, font) : NULL;
+    if (!font) return;
+    HGDIOBJ oldFont = SelectObject(memDC, font);
+    if (oldFont == HGDI_ERROR) { DeleteObject(font); return; }
     SetBkMode(memDC, TRANSPARENT);
     SetTextColor(memDC, RGB(255, 255, 255));
 
@@ -34,9 +36,10 @@ void TodoOverlay_DrawOnMemDC(HDC memDC, int w, int h) {
     SetTextColor(memDC, RGB(230, 230, 230));
     for (int i = 0; i < n; i++) {
         wchar_t wl[256];
-        MultiByteToWideChar(CP_UTF8, 0, lines[i], -1, wl, _countof(wl));
+        if (!MultiByteToWideChar(CP_UTF8, 0, lines[i], -1, wl, _countof(wl))) continue;
         RECT r = {8, h - (n - i) * 17 - 4, w - 8, h - (n - i - 1) * 17 - 4};
-        DrawTextW(memDC, wl, -1, &r, DT_LEFT | DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX);
+        if (r.right > r.left && r.bottom > r.top)
+            DrawTextW(memDC, wl, -1, &r, DT_LEFT | DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX);
     }
     if (oldFont) SelectObject(memDC, oldFont);
     if (font) DeleteObject(font);
