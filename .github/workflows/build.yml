@@ -320,6 +320,15 @@ jobs:
             exit 1
           }
 
+      - name: Upload MSVC configure log (always, for diagnosis)
+        if: always() && steps.scope.outputs.run == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: msvc-configure-log-${{ github.run_id }}-${{ github.run_attempt }}
+          path: quality-msvc-analyze-configure.log
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Build with MSVC analyzer
         id: build
         if: steps.scope.outputs.run == 'true'
@@ -442,6 +451,15 @@ jobs:
             Get-Content $cfgLog | Select-Object -Last 40 | ForEach-Object { Write-Output "COPYABLE CONFIG $_"; Write-Output "::error::CONFIG $_" }
             exit 1
           }
+
+      - name: Upload quality-windows-asan-configure.log (always, for diagnosis)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: asan-configure-log-${{ github.run_id }}-${{ github.run_attempt }}
+          path: quality-windows-asan-configure.log
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Build ASan smoke binary
         id: build
@@ -575,6 +593,15 @@ jobs:
             exit 1
           }
 
+      - name: Upload quality-win32-baseline-configure.log (always, for diagnosis)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: win32-baseline-configure-log-${{ github.run_id }}-${{ github.run_attempt }}
+          path: quality-win32-baseline-configure.log
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Build Win32 release binary
         id: build
         shell: pwsh
@@ -654,6 +681,15 @@ jobs:
             Get-Content $cfgLog | Select-Object -Last 40 | ForEach-Object { Write-Output "COPYABLE CONFIG $_"; Write-Output "::error::CONFIG $_" }
             exit 1
           }
+
+      - name: Upload quality-binskim-configure.log (always, for diagnosis)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: binskim-configure-log-${{ github.run_id }}-${{ github.run_attempt }}
+          path: quality-binskim-configure.log
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Build BinSkim target
         id: build
