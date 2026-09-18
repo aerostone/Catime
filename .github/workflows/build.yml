@@ -297,6 +297,7 @@ jobs:
           }
 
           "run=$($runAnalyzer.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          Write-Output "MSVC analyzer scope decision: run=$($runAnalyzer.ToString().ToLowerInvariant()) event=$env:EVENT_NAME range=$diffRange"
 
       - name: Configure MSVC analyzer build
         id: configure
