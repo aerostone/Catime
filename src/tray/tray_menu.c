@@ -26,6 +26,7 @@
 #include "utils/natural_sort.h"
 #include "utils/string_format.h"
 #include "tray/tray_menu_pomodoro.h"
+#include "tray/tray_menu_todo.h"
 #include "tray/tray_menu_font.h"
 #include "tray/tray_menu_submenus.h"
 #include "tray/tray_menu_theme.h"
@@ -104,6 +105,10 @@ void ShowColorMenu(HWND hwnd, const POINT* anchor) {
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
     BuildPluginsSubmenu(hMenu);
+
+    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+
+    BuildTodoMenu(hMenu);
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 

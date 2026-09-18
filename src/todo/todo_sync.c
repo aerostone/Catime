@@ -7,6 +7,7 @@
  * todo_sync_http.c (shared state via todo_sync_internal.h).
  */
 #include "todo_sync_internal.h"
+#include "config/config_ini_api.h"
 
 CRITICAL_SECTION g_todoSyncLock;
 BOOL g_todoSyncLockInit = FALSE;
@@ -130,9 +131,62 @@ BOOL TodoSync_SetEnabled(BOOL enabled) {
     EnterCriticalSection(&g_todoSyncLock);
     g_todoSyncEnabled = enabled;
     LeaveCriticalSection(&g_todoSyncLock);
-    WritePrivateProfileStringW(L"Sync", L"Enabled", enabled ? L"1" : L"0", g_todoSyncIniPath);
+    char iniA[MAX_PATH] = "";
+    if (WideCharToMultiByte(CP_UTF8, 0, g_todoSyncIniPath, -1,
+                            iniA, sizeof(iniA), NULL, NULL) && iniA[0]) {
+        WriteIniBool("Sync", "Enabled", enabled, iniA);
+    }
     if (enabled) TodoSync_PollNow();
     return TRUE;
+}
+
+void TodoSync_Reload(void) {
+    EnterCriticalSection(&g_todoSyncLock);
+    LoadConfigW();
+    LeaveCriticalSection(&g_todoSyncLock);
+    TodoSync_PollNow();
+}
+
+void TodoSync_GetSettings(BOOL *enabled, char *serverUrl, size_t urlCap,
+                          char *token, size_t tokenCap, int *pollSec) {
+    EnterCriticalSection(&g_todoSyncLock);
+    if (enabled) *enabled = g_todoSyncEnabled;
+    if (serverUrl && urlCap) strcpy_s(serverUrl, urlCap, g_todoSyncServer);
+    if (token && tokenCap) strcpy_s(token, tokenCap, g_todoSyncToken);
+    if (pollSec) *pollSec = g_todoSyncPollSec;
+    LeaveCriticalSection(&g_todoSyncLock);
+}
+
+BOOL TodoSync_ApplySettings(BOOL enabled, const char *serverUrl,
+                            const char *token, int pollSec) {
+    if (pollSec < 15) pollSec = 15;
+    if (pollSec > 600) pollSec = 600;
+    EnterCriticalSection(&g_todoSyncLock);
+    g_todoSyncEnabled = enabled;
+    if (serverUrl) strcpy_s(g_todoSyncServer, sizeof(g_todoSyncServer), serverUrl);
+    if (token) strcpy_s(g_todoSyncToken, sizeof(g_todoSyncToken), token);
+    g_todoSyncPollSec = pollSec;
+    LeaveCriticalSection(&g_todoSyncLock);
+    char iniA[MAX_PATH] = "";
+    if (!WideCharToMultiByte(CP_UTF8, 0, g_todoSyncIniPath, -1,
+                             iniA, sizeof(iniA), NULL, NULL) || !iniA[0])
+        return FALSE;
+    char pollA[16];
+    _snprintf_s(pollA, sizeof(pollA), _TRUNCATE, "%d", pollSec);
+    IniKeyValue updates[4];
+    updates[0].section = "Sync";
+    updates[0].key = "Enabled";
+    updates[0].value = enabled ? "1" : "0";
+    updates[1].section = "Sync";
+    updates[1].key = "ServerUrl";
+    updates[1].value = serverUrl ? serverUrl : "";
+    updates[2].section = "Sync";
+    updates[2].key = "Token";
+    updates[2].value = token ? token : "";
+    updates[3].section = "Sync";
+    updates[3].key = "PollInterval";
+    updates[3].value = pollA;
+    return WriteIniMultipleAtomic(iniA, updates, 4);
 }
 
 BOOL TodoSync_OnPomodoroComplete(const char *taskId, int minutes) {

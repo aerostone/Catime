@@ -28,6 +28,14 @@ BOOL TodoSync_SetEnabled(BOOL enabled);
 BOOL TodoSync_OnPomodoroComplete(const char *taskId, int minutes);
 /* Mark a task done (PATCH status=done). Cache self-heals on next poll. */
 BOOL TodoSync_MarkDone(const char *taskId);
+/* Re-read Sync section from ini (settings dialog) without restart. */
+void TodoSync_Reload(void);
+/* Read current Sync settings for the settings dialog. */
+void TodoSync_GetSettings(BOOL *enabled, char *serverUrl, size_t urlCap,
+                          char *token, size_t tokenCap, int *pollSec);
+/* Write Sync settings via INI cache layer (no bare ProfileString). */
+BOOL TodoSync_ApplySettings(BOOL enabled, const char *serverUrl,
+                            const char *token, int pollSec);
 
 /* UI snapshot: fills up to maxLines UTF-8 lines " [ ] title" / " [x] title".
  * Returns number of lines written. Thread-safe, never blocks >50ms. */

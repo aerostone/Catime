@@ -188,6 +188,14 @@
 /** @brief Quick time menu base identifier */
 #define CLOCK_IDM_QUICK_TIME_BASE 800    /**< Base ID for dynamic quick time menus */
 
+/** @brief TODO menu identifiers (local tasks + stickies + sync) */
+#define CLOCK_IDM_TODO_MENU 144            /**< TODO submenu */
+#define CLOCK_IDM_TODO_LIST 145            /**< Open task list dialog */
+#define CLOCK_IDM_TODO_NEW 146             /**< New local task */
+#define CLOCK_IDM_TODO_NEW_STICKY 147      /**< New task + pin as sticky */
+#define CLOCK_IDM_TODO_SETTINGS 148        /**< TODO sync settings dialog */
+#define CLOCK_IDM_TODO_SYNC_NOW 149        /**< Force one sync poll now */
+
 /** @brief Basic menu identifiers */
 #define CLOCK_IDM_CUSTOM_COUNTDOWN 101       /**< Custom countdown input */
 #define CLOCK_IDM_EXIT 109                   /**< Exit application */

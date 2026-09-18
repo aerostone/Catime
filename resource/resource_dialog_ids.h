@@ -144,6 +144,33 @@
 #define IDC_PLUGIN_SECURITY_RUN_ONCE_BTN 765    /**< Plugin security run once button */
 #define IDC_PLUGIN_SECURITY_TRUST_BTN 766       /**< Plugin security trust button */
 
+/** @brief TODO dialog identifiers */
+#define IDD_TODO_LIST_DIALOG 780          /**< TODO task list dialog */
+#define IDC_TODO_LIST_VIEW 781            /**< Task listbox control */
+#define IDC_TODO_FILTER_SOURCE 782        /**< Source filter combo */
+#define IDC_TODO_FILTER_IMPORTANCE 783    /**< Importance filter combo */
+#define IDC_TODO_FILTER_DUE_FROM 784      /**< Due-from date edit */
+#define IDC_TODO_FILTER_DUE_TO 785        /**< Due-to date edit */
+#define IDC_TODO_FILTER_DONE_FROM 786     /**< Done-from date edit */
+#define IDC_TODO_FILTER_DONE_TO 787       /**< Done-to date edit */
+#define IDC_TODO_FILTER_KEYWORD 788       /**< Keyword search edit */
+#define IDC_TODO_SHOW_DONE 789            /**< Show completed checkbox */
+#define IDC_TODO_NEW_EDIT 790             /**< New task title edit */
+#define IDC_TODO_NEW_DUE 791              /**< New task due edit */
+#define IDC_TODO_NEW_IMPORTANCE 792       /**< New task importance combo */
+#define IDC_TODO_ADD_BUTTON 793           /**< Add task button */
+#define IDC_TODO_DONE_BUTTON 794          /**< Toggle done button */
+#define IDC_TODO_DELETE_BUTTON 795        /**< Delete task button */
+#define IDC_TODO_PIN_BUTTON 796           /**< Pin/unpin sticky button */
+#define IDC_TODO_SYNC_NOW_BTN 797         /**< Sync-now button in list */
+#define IDC_TODO_SETTINGS_BTN 798         /**< Open settings button */
+#define IDC_TODO_SETTINGS_SYNC_BTN 799    /**< Sync-now button in settings */
+#define IDD_TODO_SETTINGS_DIALOG 800      /**< TODO sync settings dialog */
+#define IDC_TODO_SYNC_ENABLE 801          /**< Sync enable checkbox */
+#define IDC_TODO_SYNC_URL 802             /**< Server URL edit */
+#define IDC_TODO_SYNC_TOKEN 803           /**< Token edit (password) */
+#define IDC_TODO_SYNC_POLL 804            /**< Poll interval edit */
+
 /** @brief Custom text display dialog identifiers */
 #define IDD_CUSTOM_TEXT_DISPLAY_DIALOG 770      /**< Custom text display dialog */
 #define IDC_CUSTOM_TEXT_DISPLAY_HINT 771        /**< Custom text display hint label */

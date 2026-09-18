@@ -63,6 +63,10 @@ LRESULT CmdModifyDefaultTime(HWND hwnd, WPARAM wp, LPARAM lp);
 BOOL HandleQuickCountdown(HWND hwnd, UINT cmd, int index);
 BOOL HandlePomodoroTime(HWND hwnd, UINT cmd, int index);
 BOOL HandlePomodoroTimeConfig(HWND hwnd, int selectedIndex);
+#define TODO_MENU_TASK_BASE 5600
+#define TODO_MENU_TASK_COUNT 5
+
+BOOL HandleTodoMenuRow(HWND hwnd, UINT cmd, int index);
 
 /* ============================================================================
  * Plugin Commands (window_commands_plugin.c)
