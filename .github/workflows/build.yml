@@ -304,6 +304,7 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         shell: pwsh
         run: |
+          Write-Output "CONFIGURE_STEP_MARKER msvc-analyze ran at $(Get-Date -Format o)"
           $cfgLog = Join-Path $PWD "quality-msvc-analyze-configure.log"
           cmake -S . -B build-msvc -G "Visual Studio 17 2022" -A Win32 `
             -DCMAKE_BUILD_TYPE=Debug `
