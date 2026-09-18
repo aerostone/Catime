@@ -18,10 +18,10 @@ char *TodoSyncHttp_Get(const char *url, const char *bearer) {
     wchar_t whead[512];
     char headA[512];
 
-    MultiByteToWideChar(CP_UTF8, 0, url, -1, wurl, _countof(wurl));
+    if (!MultiByteToWideChar(CP_UTF8, 0, url, -1, wurl, _countof(wurl))) return NULL;
     if (bearer && *bearer) {
         _snprintf_s(headA, sizeof(headA), _TRUNCATE, "Authorization: Bearer %s", bearer);
-        MultiByteToWideChar(CP_UTF8, 0, headA, -1, whead, _countof(whead));
+        if (!MultiByteToWideChar(CP_UTF8, 0, headA, -1, whead, _countof(whead))) return NULL;
     }
     hNet = InternetOpenW(wagent, INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
     if (!hNet) return NULL;
@@ -94,6 +94,13 @@ static BOOL SendJson(const char *url, const wchar_t *verb,
     HINTERNET hConn = NULL, hNet = NULL;
     HINTERNET hReq = OpenVerbRequest(url, verb, &hConn, &hNet);
     if (!hReq) return FALSE;
+    if (!bodyJson) {
+        InternetCloseHandle(hReq);
+        InternetCloseHandle(hConn);
+        InternetCloseHandle(hNet);
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
     char heads[512];
     _snprintf_s(heads, sizeof(heads), _TRUNCATE,
                 "Content-Type: application/json\r\nAuthorization: Bearer %s\r\n",

@@ -95,7 +95,10 @@ BOOL TodoSync_Init(HWND hwndMain, const wchar_t *iniPath) {
         g_todoSyncLockInit = TRUE;
     }
     g_todoSyncHwnd = hwndMain;
-    if (iniPath) wcsncpy_s(g_todoSyncIniPath, _countof(g_todoSyncIniPath), iniPath, _TRUNCATE);
+    if (iniPath) {
+        if (wcsncpy_s(g_todoSyncIniPath, _countof(g_todoSyncIniPath), iniPath, _TRUNCATE) != 0)
+            g_todoSyncIniPath[0] = L'\0';
+    }
     LoadConfigW();
     memset(&g_todoSyncCache, 0, sizeof(g_todoSyncCache));
     InterlockedExchange(&g_todoSyncRunning, 1);
@@ -169,6 +172,7 @@ BOOL TodoSync_MarkDone(const char *taskId) {
 
 int TodoSync_GetLines(char lines[][256], int maxLines) {
     int n = 0;
+    if (!lines || maxLines <= 0) return 0;
     EnterCriticalSection(&g_todoSyncLock);
 #define EMIT(mark, item) do { \
     if (n < maxLines) { \

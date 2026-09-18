@@ -82,11 +82,14 @@ static BOOL CALLBACK UnionMonitors(HMONITOR h, HDC dc, LPRECT r, LPARAM p) {
 static LRESULT CALLBACK DimProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     switch (msg) {
     case WM_ERASEBKGND: {
+        HDC hdc = (HDC)wp;
         RECT rc;
-        GetClientRect(hwnd, &rc);
+        if (!hdc || !GetClientRect(hwnd, &rc)) break;
         HBRUSH b = CreateSolidBrush(g_fsBg);
-        FillRect((HDC)wp, &rc, b);
-        DeleteObject(b);
+        if (b) {
+            FillRect(hdc, &rc, b);
+            DeleteObject(b);
+        }
         return 1;
     }
     case WM_KEYDOWN:
@@ -115,7 +118,7 @@ static LRESULT CALLBACK CardProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         PAINTSTRUCT ps;
         HDC hdc = BeginPaint(hwnd, &ps);
         RECT rc;
-        GetClientRect(hwnd, &rc);
+        if (!GetClientRect(hwnd, &rc)) { EndPaint(hwnd, &ps); return 0; }
         /* card bg */
         HBRUSH bg = CreateSolidBrush(RGB(255, 255, 255));
         FillRect(hdc, &rc, bg);
@@ -161,7 +164,11 @@ static LRESULT CALLBACK CardProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 static int MeasureH(HWND ref, HFONT f, const wchar_t *s, int w) {
     HDC hdc = GetDC(ref);
     if (!hdc) return 60;
-    HGDIOBJ old = f ? SelectObject(hdc, f) : NULL;
+    HGDIOBJ old = NULL;
+    if (f) {
+        old = SelectObject(hdc, f);
+        if (old == HGDI_ERROR) old = NULL;
+    }
     RECT r = {0, 0, w, 0};
     DrawTextW(hdc, s ? s : L"", -1, &r, DT_WORDBREAK | DT_CALCRECT | DT_NOPREFIX);
     if (old) SelectObject(hdc, old);
@@ -200,6 +207,12 @@ void TimeoutFullscreen_Show(HWND hwndOwner, const wchar_t *title, const wchar_t 
     free(g_title); free(g_msg);
     g_title = DupStr(title);
     g_msg = DupStr(message);
+    if (!g_title || !g_msg) {
+        free(g_title); g_title = NULL;
+        free(g_msg); g_msg = NULL;
+        InterlockedExchange(&g_showing, 0);
+        return;
+    }
     FreeFonts();
     /* styled from config (clamped at apply time) */
     g_fsTitlePx = g_AppConfig.notification.display.fullscreen_title_px;
@@ -217,6 +230,11 @@ void TimeoutFullscreen_Show(HWND hwndOwner, const wchar_t *title, const wchar_t 
     g_fTitle = MakeFontEx(g_fsFont, g_fsTitlePx, TRUE);
     g_fMsg = MakeFontEx(g_fsFont, g_fsMsgPx, FALSE);
     g_fHint = MakeFontEx(g_fsFont, TFS_HINT_PX, FALSE);
+    if (!g_fTitle || !g_fMsg || !g_fHint) {
+        FreeFonts();
+        InterlockedExchange(&g_showing, 0);
+        return;
+    }
 
     MonitorUnion u;
     memset(&u, 0, sizeof(u));
