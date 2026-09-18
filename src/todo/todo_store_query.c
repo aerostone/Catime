@@ -5,6 +5,7 @@
  * Sort: overdue (past-due, open) first, then due date asc
  * (dateless last), then importance desc, then title.
  */
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 

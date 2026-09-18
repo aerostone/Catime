@@ -7,6 +7,7 @@
  * high red). Done tasks render struck title via gray text.
  */
 #include <windows.h>
+#include <stdio.h>
 
 #include "todo_types.h"
 

@@ -6,6 +6,7 @@
  * then New task / New sticky / Task list... / Sync now / Settings.
  * Sync now is grayed when sync backend is not configured.
  */
+#include <stdio.h>
 #include <string.h>
 
 #include "tray/tray_menu_todo.h"
