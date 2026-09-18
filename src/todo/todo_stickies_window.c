@@ -13,7 +13,7 @@ BOOL TodoStickyEdit_Commit(const char *oldId, const wchar_t *newTitle,
 
 #define STICKY_CLASS L"CatimeStickyClass"
 #define STICKY_BAR_H 26
-#define STICKY_MAX_WIN 16
+#define STICKY_SLOT_MAX_WIN 16
 #define STICKY_EDIT_ID 9001
 #define STICKY_MENU_DONE 9101
 #define STICKY_MENU_UNPIN 9102
@@ -25,30 +25,31 @@ COLORREF TodoSticky_BarColor(TodoImportance imp, BOOL done);
 void TodoSticky_Paint(HDC hdc, const RECT *rc, const TodoTask *t,
                       HFONT fTitle, HFONT fBody);
 
-typedef struct {
-    BOOL used;
-    HWND hwnd;
-    HWND edit;
-    char taskId[TODO_STORE_ID_LEN];
-    BOOL dragging;
-    POINT dragOff;
-    HFONT fTitle;
-    HFONT fBody;
-} StickyWin;
+#include "todo_stickies_slot.h"
 
-static StickyWin s_wins[STICKY_MAX_WIN];
+static StickyWin s_wins[STICKY_SLOT_MAX_WIN];
 static BOOL s_classReg = FALSE;
 
-static StickyWin *FindById(const char *id) {
-    for (int i = 0; i < STICKY_MAX_WIN; i++) {
+int TodoSticky_SlotCount(void) {
+    return STICKY_SLOT_MAX_WIN;
+}
+
+StickyWin *TodoSticky_SlotAt(int index) {
+    if (index < 0 || index >= STICKY_SLOT_MAX_WIN) return NULL;
+    return &s_wins[index];
+}
+
+StickyWin *TodoSticky_SlotById(const char *id) {
+    if (!id) return NULL;
+    for (int i = 0; i < STICKY_SLOT_MAX_WIN; i++) {
         if (s_wins[i].used && strcmp(s_wins[i].taskId, id) == 0)
             return &s_wins[i];
     }
     return NULL;
 }
 
-static StickyWin *FindByHwnd(HWND h) {
-    for (int i = 0; i < STICKY_MAX_WIN; i++) {
+StickyWin *TodoSticky_SlotByHwnd(HWND h) {
+    for (int i = 0; i < STICKY_SLOT_MAX_WIN; i++) {
         if (s_wins[i].used && s_wins[i].hwnd == h)
             return &s_wins[i];
     }
@@ -95,7 +96,7 @@ static void OpenEdit(StickyWin *sw) {
 
 static void TodoSticky_RunMenuCommand(HWND hwnd, const char *taskId,
                                       BOOL done, UINT cmd) {
-    StickyWin *sw = FindByHwnd(hwnd);
+    StickyWin *sw = TodoSticky_SlotByHwnd(hwnd);
     if (!sw || !taskId) return;
     if (cmd == STICKY_MENU_DONE) {
         TodoStore_SetDone(taskId, !done);
@@ -112,7 +113,7 @@ static void TodoSticky_RunMenuCommand(HWND hwnd, const char *taskId,
 
 
 static LRESULT CALLBACK StickyProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
-    StickyWin *sw = FindByHwnd(hwnd);
+    StickyWin *sw = TodoSticky_SlotByHwnd(hwnd);
     switch (msg) {
     case WM_PAINT: {
         PAINTSTRUCT ps;
@@ -234,13 +235,13 @@ static BOOL EnsureClass(void) {
 
 void TodoStickies_Show(const char *taskId) {
     if (!taskId || !taskId[0] || !EnsureClass()) return;
-    if (FindById(taskId)) {
-        StickyWin *e = FindById(taskId);
+    if (TodoSticky_SlotById(taskId)) {
+        StickyWin *e = TodoSticky_SlotById(taskId);
         ShowWindow(e->hwnd, SW_SHOW);
         return;
     }
     StickyWin *sw = NULL;
-    for (int i = 0; i < STICKY_MAX_WIN; i++) {
+    for (int i = 0; i < STICKY_SLOT_MAX_WIN; i++) {
         if (!s_wins[i].used) {
             sw = &s_wins[i];
             break;

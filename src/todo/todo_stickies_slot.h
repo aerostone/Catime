@@ -1,0 +1,35 @@
+/**
+ * @file todo_stickies_slot.h
+ * @brief Internal sticky window slot table shared by window + lifecycle TUs.
+ *
+ * Internal header (not installed). The slot array lives in
+ * todo_stickies_window.c; todo_stickies_lifecycle.c operates on it only
+ * through these accessors so no TU touches another TU's statics.
+ */
+#ifndef CATIME_TODO_STICKIES_SLOT_H
+#define CATIME_TODO_STICKIES_SLOT_H
+
+#include <windows.h>
+
+#include "todo/todo_types.h"
+
+#define STICKY_SLOT_MAX_WIN 16
+
+typedef struct {
+    BOOL used;
+    HWND hwnd;
+    HWND edit;
+    char taskId[TODO_STORE_ID_LEN];
+    BOOL dragging;
+    POINT dragOff;
+    HFONT fTitle;
+    HFONT fBody;
+} StickyWin;
+
+int TodoSticky_SlotCount(void);
+StickyWin *TodoSticky_SlotAt(int index);
+StickyWin *TodoSticky_SlotById(const char *id);
+StickyWin *TodoSticky_SlotByHwnd(HWND h);
+void TodoStickies_Show(const char *taskId);
+
+#endif /* CATIME_TODO_STICKIES_SLOT_H */
