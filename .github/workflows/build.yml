@@ -231,7 +231,7 @@ jobs:
 
   msvc-analyze:
     name: quality / msvc-analyze
-    runs-on: windows-2025
+    runs-on: windows-2025-vs2026
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -304,7 +304,7 @@ jobs:
         shell: pwsh
         run: |
           $cfgLog = Join-Path $PWD "quality-msvc-analyze-configure.log"
-          cmake -S . -B build-msvc -G "Visual Studio 17 2022" -A Win32 `
+          cmake -S . -B build-msvc -G "Visual Studio 18 2026" -A Win32 `
             -DCMAKE_BUILD_TYPE=Debug `
             -DBUILD_TESTING=OFF `
             -DCATIME_ENABLE_MSVC_ANALYZE=ON `
@@ -418,7 +418,7 @@ jobs:
 
   windows-asan-smoke:
     name: quality / windows-asan-smoke
-    runs-on: windows-2025
+    runs-on: windows-2025-vs2026
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -428,7 +428,7 @@ jobs:
         shell: pwsh
         run: |
           $cfgLog = Join-Path $PWD "quality-windows-asan-configure.log"
-          cmake -S . -B build-asan -G "Visual Studio 17 2022" -A Win32 `
+          cmake -S . -B build-asan -G "Visual Studio 18 2026" -A Win32 `
             -DCMAKE_BUILD_TYPE=Debug `
             -DCATIME_ENABLE_ASAN=ON `
             -DCATIME_ENABLE_WARNINGS=ON `
@@ -551,7 +551,7 @@ jobs:
 
   win32-binary-baseline:
     name: quality / win32-binary-baseline
-    runs-on: windows-2025
+    runs-on: windows-2025-vs2026
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -561,7 +561,7 @@ jobs:
         shell: pwsh
         run: |
           $cfgLog = Join-Path $PWD "quality-win32-baseline-configure.log"
-          cmake -S . -B build-win32-baseline -G "Visual Studio 17 2022" -A Win32 `
+          cmake -S . -B build-win32-baseline -G "Visual Studio 18 2026" -A Win32 `
             -DCMAKE_BUILD_TYPE=Release `
             -DCATIME_ENABLE_BINARY_HARDENING=ON `
             -DCATIME_ENABLE_WARNINGS=ON `
@@ -626,7 +626,7 @@ jobs:
 
   binskim:
     name: quality / binskim
-    runs-on: windows-2025
+    runs-on: windows-2025-vs2026
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -641,7 +641,7 @@ jobs:
         shell: pwsh
         run: |
           $cfgLog = Join-Path $PWD "quality-binskim-configure.log"
-          cmake -S . -B build-binskim -G "Visual Studio 17 2022" -A Win32 `
+          cmake -S . -B build-binskim -G "Visual Studio 18 2026" -A Win32 `
             -DCMAKE_BUILD_TYPE=Release `
             -DCATIME_ENABLE_BINARY_HARDENING=ON `
             -DCATIME_ENABLE_WARNINGS=ON `
