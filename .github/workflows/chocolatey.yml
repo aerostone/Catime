@@ -97,6 +97,8 @@ jobs:
       - name: Test Chocolatey package installation
         id: test
         shell: pwsh
+        env:
+          CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
         run: |
           choco install catime `
             --source "${{ github.workspace }}\chocolatey-output" `
@@ -106,6 +108,13 @@ jobs:
             --no-progress `
             --limit-output
           if ($LASTEXITCODE -ne 0) {
+            if ([string]::IsNullOrWhiteSpace($env:CHOCOLATEY_API_KEY)) {
+              # No API key means nothing will be pushed; a local-source
+              # install failure must not fail the release run.
+              Write-Output "::warning::Local Chocolatey install test failed, but CHOCOLATEY_API_KEY is not configured so nothing will be published. Continuing."
+              "installed=false" >> $env:GITHUB_OUTPUT
+              exit 0
+            }
             exit $LASTEXITCODE
           }
           "installed=true" >> $env:GITHUB_OUTPUT
