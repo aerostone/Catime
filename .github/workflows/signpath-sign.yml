@@ -96,6 +96,7 @@ jobs:
           });
           
     - name: Extract signed files
+      if: steps.signpath-submit.outcome == 'success'
       run: |
         echo "Signed output directory contents:"
         find ./signed-output -type f -exec ls -la {} \;
