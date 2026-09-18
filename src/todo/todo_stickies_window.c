@@ -3,6 +3,7 @@
  * @brief Sticky topmost tool windows: create/drag/edit/close.
  */
 #include <string.h>
+#include <windowsx.h>
 
 #include "todo_stickies.h"
 #include "todo_store.h"

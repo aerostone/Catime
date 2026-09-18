@@ -13,7 +13,10 @@
 #include "dialog/dialog_todo.h"
 #include "../../resource/resource.h"
 #include "dialog/dialog_registry.h"
+#include "todo/todo_stickies.h"
+#include "todo/todo_store.h"
 #include "todo/todo_sync.h"
+#include "todo/todo_sync_internal.h"
 
 static void FillFromCurrent(HWND hdlg) {
     char url[TODO_URL_LEN] = "";
