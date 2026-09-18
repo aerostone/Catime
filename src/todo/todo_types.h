@@ -47,8 +47,16 @@ typedef struct {
     char createdAt[TODO_STORE_DATE_LEN];/* creation date or "" */
 } TodoTask;
 
+/* Due date scope preset for the list dialog. */
+typedef enum {
+    TODO_DUE_SCOPE_WEEK = 0,   /* default: current week Mon..Sun */
+    TODO_DUE_SCOPE_MONTH = 1,  /* current calendar month */
+    TODO_DUE_SCOPE_CUSTOM = 2  /* manual fromDate/toDate range */
+} TodoDueScope;
+
 /* Filter for list dialog: each field empty/negative = no constraint. */
 typedef struct {
+    TodoDueScope dueScope;   /* week/month/custom, custom uses from/to */
     BOOL showDone;          /* FALSE hides completed tasks */
     BOOL showLocal;         /* include local tasks */
     BOOL showSync;          /* include sync tasks */

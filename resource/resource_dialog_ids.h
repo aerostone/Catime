@@ -154,6 +154,7 @@
 #define IDC_TODO_FILTER_DONE_FROM 786     /**< Done-from date edit */
 #define IDC_TODO_FILTER_DONE_TO 787       /**< Done-to date edit */
 #define IDC_TODO_FILTER_KEYWORD 788       /**< Keyword search edit */
+#define IDC_TODO_FILTER_DUE_SCOPE 805        /**< Due date-scope combo (week/month/custom) */
 #define IDC_TODO_SHOW_DONE 789            /**< Show completed checkbox */
 #define IDC_TODO_NEW_EDIT 790             /**< New task title edit */
 #define IDC_TODO_NEW_DUE 791              /**< New task due edit */

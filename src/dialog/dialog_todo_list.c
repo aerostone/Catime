@@ -26,8 +26,69 @@ TodoDlgState *TodoDlg_State(void) {
     return &s_state;
 }
 
+static void ApplyScopeRange(TodoFilter *f) {
+    if (f->dueScope == TODO_DUE_SCOPE_CUSTOM) return;
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+    if (f->dueScope == TODO_DUE_SCOPE_MONTH) {
+        _snprintf_s(f->fromDate, sizeof(f->fromDate), _TRUNCATE,
+                    "%04d-%02d-01", st.wYear, st.wMonth);
+        int last = 28;
+        switch (st.wMonth) {
+        case 1: case 3: case 5: case 7: case 8: case 10: case 12:
+            last = 31;
+            break;
+        case 4: case 6: case 9: case 11:
+            last = 30;
+            break;
+        default: {
+            BOOL leap = ((st.wYear % 4 == 0 && st.wYear % 100 != 0) ||
+                         st.wYear % 400 == 0);
+            last = leap ? 29 : 28;
+            break;
+        }
+        }
+        _snprintf_s(f->toDate, sizeof(f->toDate), _TRUNCATE,
+                    "%04d-%02d-%02d", st.wYear, st.wMonth, last);
+        return;
+    }
+    /* week: Monday..Sunday of the current week */
+    int dow = (int)st.wDayOfWeek; /* 0=Sunday */
+    int back = (dow == 0) ? 6 : dow - 1;
+    int fwd = (dow == 0) ? 0 : 7 - dow;
+    FILETIME ft, ft0, ft1;
+    SYSTEMTIME base = st;
+    base.wHour = 12;
+    base.wMinute = 0;
+    base.wSecond = 0;
+    base.wMilliseconds = 0;
+    SystemTimeToFileTime(&base, &ft);
+    ULARGE_INTEGER u;
+    u.LowPart = ft.dwLowDateTime;
+    u.HighPart = ft.dwHighDateTime;
+    ULONGLONG day = 24ULL * 3600ULL * 10000000ULL;
+    u.QuadPart -= (ULONGLONG)back * day;
+    ft0.dwLowDateTime = u.LowPart;
+    ft0.dwHighDateTime = u.HighPart;
+    u.QuadPart += (ULONGLONG)(back + fwd) * day;
+    ft1.dwLowDateTime = u.LowPart;
+    ft1.dwHighDateTime = u.HighPart;
+    SYSTEMTIME s0, s1;
+    FileTimeToSystemTime(&ft0, &s0);
+    FileTimeToSystemTime(&ft1, &s1);
+    _snprintf_s(f->fromDate, sizeof(f->fromDate), _TRUNCATE,
+                "%04d-%02d-%02d", s0.wYear, s0.wMonth, s0.wDay);
+    _snprintf_s(f->toDate, sizeof(f->toDate), _TRUNCATE,
+                "%04d-%02d-%02d", s1.wYear, s1.wMonth, s1.wDay);
+}
+
 static void ReadFilterFromUI(HWND hdlg, TodoFilter *f) {
     TodoFilter_InitDefault(f);
+    LRESULT scope = SendDlgItemMessageW(hdlg, IDC_TODO_FILTER_DUE_SCOPE,
+                                        CB_GETCURSEL, 0, 0);
+    if (scope == 1) f->dueScope = TODO_DUE_SCOPE_MONTH;
+    else if (scope == 2) f->dueScope = TODO_DUE_SCOPE_CUSTOM;
+    else f->dueScope = TODO_DUE_SCOPE_WEEK;
     LRESULT src = SendDlgItemMessageW(hdlg, IDC_TODO_FILTER_SOURCE,
                                       CB_GETCURSEL, 0, 0);
     if (src == 1) f->showSync = FALSE;
@@ -39,15 +100,19 @@ static void ReadFilterFromUI(HWND hdlg, TodoFilter *f) {
     else if (imp == 3) f->minImportance = TODO_IMPORTANCE_HIGH;
     wchar_t w[TODO_STORE_DATE_LEN];
     char u[TODO_STORE_DATE_LEN];
-    GetDlgItemTextW(hdlg, IDC_TODO_FILTER_DUE_FROM, w, _countof(w));
-    if (w[0]) {
-        WideCharToMultiByte(CP_UTF8, 0, w, -1, u, sizeof(u), NULL, NULL);
-        strcpy_s(f->fromDate, sizeof(f->fromDate), u);
-    }
-    GetDlgItemTextW(hdlg, IDC_TODO_FILTER_DUE_TO, w, _countof(w));
-    if (w[0]) {
-        WideCharToMultiByte(CP_UTF8, 0, w, -1, u, sizeof(u), NULL, NULL);
-        strcpy_s(f->toDate, sizeof(f->toDate), u);
+    if (f->dueScope == TODO_DUE_SCOPE_CUSTOM) {
+        GetDlgItemTextW(hdlg, IDC_TODO_FILTER_DUE_FROM, w, _countof(w));
+        if (w[0]) {
+            WideCharToMultiByte(CP_UTF8, 0, w, -1, u, sizeof(u), NULL, NULL);
+            strcpy_s(f->fromDate, sizeof(f->fromDate), u);
+        }
+        GetDlgItemTextW(hdlg, IDC_TODO_FILTER_DUE_TO, w, _countof(w));
+        if (w[0]) {
+            WideCharToMultiByte(CP_UTF8, 0, w, -1, u, sizeof(u), NULL, NULL);
+            strcpy_s(f->toDate, sizeof(f->toDate), u);
+        }
+    } else {
+        ApplyScopeRange(f);
     }
     GetDlgItemTextW(hdlg, IDC_TODO_FILTER_DONE_FROM, w, _countof(w));
     if (w[0]) {
@@ -103,6 +168,11 @@ void TodoDlg_OnSelect(HWND hdlg, int listIndex);
 void ShowTodoSettingsDialog(HWND hwndParent);
 
 static void InitCombos(HWND hdlg) {
+    HWND scope = GetDlgItem(hdlg, IDC_TODO_FILTER_DUE_SCOPE);
+    SendMessageW(scope, CB_ADDSTRING, 0, (LPARAM)L"Week");
+    SendMessageW(scope, CB_ADDSTRING, 0, (LPARAM)L"Month");
+    SendMessageW(scope, CB_ADDSTRING, 0, (LPARAM)L"Custom");
+    SendMessageW(scope, CB_SETCURSEL, 0, 0);
     HWND src = GetDlgItem(hdlg, IDC_TODO_FILTER_SOURCE);
     SendMessageW(src, CB_ADDSTRING, 0, (LPARAM)L"All");
     SendMessageW(src, CB_ADDSTRING, 0, (LPARAM)L"Local");
@@ -134,6 +204,8 @@ static INT_PTR CALLBACK TodoListProc(HWND hdlg, UINT msg,
         Dialog_InitializeInstance(DIALOG_INSTANCE_TODO_LIST, hdlg);
         TodoFilter_InitDefault(&s_state.filter);
         InitCombos(hdlg);
+        EnableWindow(GetDlgItem(hdlg, IDC_TODO_FILTER_DUE_FROM), FALSE);
+        EnableWindow(GetDlgItem(hdlg, IDC_TODO_FILTER_DUE_TO), FALSE);
         RefreshList(hdlg);
         return TRUE;
     case WM_COMMAND: {
@@ -174,8 +246,15 @@ static INT_PTR CALLBACK TodoListProc(HWND hdlg, UINT msg,
             TodoDlg_OnSelect(hdlg, sel);
             return TRUE;
         }
-        if ((id == IDC_TODO_FILTER_SOURCE || id == IDC_TODO_FILTER_IMPORTANCE) &&
-            code == CBN_SELCHANGE) {
+        if ((id == IDC_TODO_FILTER_SOURCE || id == IDC_TODO_FILTER_IMPORTANCE ||
+             id == IDC_TODO_FILTER_DUE_SCOPE) && code == CBN_SELCHANGE) {
+            if (id == IDC_TODO_FILTER_DUE_SCOPE) {
+                LRESULT sel = SendDlgItemMessageW(hdlg, IDC_TODO_FILTER_DUE_SCOPE,
+                                                  CB_GETCURSEL, 0, 0);
+                BOOL custom = (sel == 2);
+                EnableWindow(GetDlgItem(hdlg, IDC_TODO_FILTER_DUE_FROM), custom);
+                EnableWindow(GetDlgItem(hdlg, IDC_TODO_FILTER_DUE_TO), custom);
+            }
             RefreshList(hdlg);
             return TRUE;
         }
