@@ -878,7 +878,7 @@ jobs:
     if: >-
       always() &&
       needs.build.result == 'success' &&
-      (needs.sign.result == 'success' || needs.sign.result == 'skipped') &&
+      (needs.sign.result == 'success' || needs.sign.result == 'skipped' || needs.sign.result == 'failure') &&
       github.repository == 'aerostone/Catime' &&
       (github.event_name != 'pull_request' ||
        github.event.pull_request.head.repo.full_name == github.repository)
@@ -899,7 +899,7 @@ jobs:
           path: vt-input
 
       - name: Download unsigned build executable
-        if: needs.sign.result == 'skipped'
+        if: needs.sign.result != 'success'
         uses: actions/download-artifact@v8
         with:
           artifact-ids: ${{ needs.build.outputs.artifact-id }}
@@ -938,6 +938,9 @@ jobs:
   store-package:
     name: package / microsoft-store
     if: >-
+      always() &&
+      needs.build.result == 'success' &&
+      (needs.sign.result == 'success' || needs.sign.result == 'skipped' || needs.sign.result == 'failure') &&
       github.repository == 'aerostone/Catime' &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&

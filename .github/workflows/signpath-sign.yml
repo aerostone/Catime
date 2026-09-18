@@ -52,8 +52,19 @@ jobs:
       signing-request-id: ${{ steps.signpath-submit.outputs.signing-request-id }}
     
     steps:
+    - name: Check SignPath credential
+      id: signpath-creds
+      run: |
+        if [ -z "${{ secrets.SIGNPATH_API_TOKEN }}" ]; then
+          echo "SIGNPATH_API_TOKEN is not configured; skipping code signing (unsigned build continues downstream)."
+          echo "configured=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Submit to SignPath for signing
       id: signpath-submit
+      if: steps.signpath-creds.outputs.configured == 'true'
       uses: signpath/github-action-submit-signing-request@v2
       with:
         api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
@@ -68,6 +79,7 @@ jobs:
           build_type: ${{ toJSON(inputs.is-release && 'release' || 'development') }}
 
     - name: Delete unsigned signing input
+      if: steps.signpath-submit.outcome == 'success'
       continue-on-error: true
       uses: actions/github-script@v8
       with:
@@ -100,6 +112,7 @@ jobs:
         find ./signed-output -name "*.exe" -exec ls -la {} \;
         
     - name: Verify signed files exist
+      if: steps.signpath-submit.outcome == 'success'
       run: |
         SIGNED_FILES=$(find ./signed-output -name "*.exe" | wc -l)
         if [ "$SIGNED_FILES" -eq 0 ]; then
@@ -107,9 +120,10 @@ jobs:
           exit 1
         fi
         echo "Found $SIGNED_FILES signed executable files"
-        
+
     - name: Upload signed artifacts
       id: upload-signed
+      if: steps.signpath-submit.outcome == 'success'
       uses: actions/upload-artifact@v7
       with:
         name: ${{ inputs.artifact-name }}
