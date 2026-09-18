@@ -6,6 +6,8 @@
 
 #include "config.h"
 
+#include <stdio.h>
+
 static const char* NotificationTypeToString(NotificationType type) {
     switch (type) {
         case NOTIFICATION_TYPE_SYSTEM_MODAL: return "SYSTEM_MODAL";

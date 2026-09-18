@@ -7,7 +7,9 @@
  */
 #include "config/config_applier.h"
 #include "config.h"
+#include "config/config_defaults.h"
 #include "config/config_plugin_security.h"
+#include "log.h"
 #include "color/color.h"
 #include "../resource/resource.h"
 #include <stdio.h>
