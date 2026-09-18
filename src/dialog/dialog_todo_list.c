@@ -18,14 +18,7 @@
 #include "todo/todo_stickies.h"
 #include "todo/todo_sync.h"
 
-#define TODO_DLG_MAX_ROWS 200
-
-typedef struct {
-    TodoFilter filter;
-    TodoTask rows[TODO_DLG_MAX_ROWS];
-    int rowCount;
-    int selected; /* index into rows, -1 none */
-} TodoDlgState;
+#include "dialog/dialog_todo_list_state.h"
 
 static TodoDlgState s_state;
 
