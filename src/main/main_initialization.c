@@ -20,6 +20,7 @@
 #include "tray/tray_animation_menu.h"
 #include "tray/tray_menu_font.h"
 #include "tray/tray_menu_theme.h"
+#include "todo/todo_stickies.h"
 #include "todo/todo_store.h"
 #include "todo/todo_sync.h"
 #include "utils/package_identity.h"
@@ -211,6 +212,7 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
         if (iniA[0]) MultiByteToWideChar(CP_UTF8, 0, iniA, -1, iniW, _countof(iniW));
         TodoSync_Init(hwnd, iniW[0] ? iniW : NULL);
         TodoStore_Init(iniW[0] ? iniW : NULL);
+        TodoStickies_RestoreAll();
     }
     InitializeAsyncCaches(hwnd);
     if (!TaskbarMonitor_Initialize(hInstance, hwnd)) {
