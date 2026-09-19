@@ -3,6 +3,7 @@
  * @brief Sync connection snapshot + conflict counter for UI surfaces.
  */
 #include "todo_sync_status.h"
+#include "language.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -59,7 +60,6 @@ void TodoSyncStatus_Label(wchar_t *out, size_t cap) {
     if (!out || !cap) return;
     char stamp[16] = "";
     TodoSyncState st = TodoSyncStatus_Get(stamp, sizeof(stamp));
-    extern const wchar_t *GetLocalizedString(const wchar_t *, const wchar_t *);
     const wchar_t *body = L"";
     switch (st) {
     case TODO_SYNC_STATE_OK: body = GetLocalizedString(L"\u540c\u6b65\u6b63\u5e38", L"Sync OK"); break;

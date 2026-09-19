@@ -17,6 +17,7 @@
 #include "todo_sticky_pomo.h"
 
 #include "todo_stickies_slot.h"
+#include "language.h"
 
 #define STICKY_TIMER_POMO 9201
 void TodoStickyEdit_Open(HWND parent, const char *taskId, HWND *editOut);
@@ -88,7 +89,6 @@ void TodoSticky_ShowRowMenu(HWND hwnd, StickyWin *sw) {
     HMENU m = CreatePopupMenu();
     if (!m) return;
     /* D5+D7: gray header anchors the task; labels localized. */
-    extern const wchar_t *GetLocalizedString(const wchar_t *, const wchar_t *);
     wchar_t wt[TODO_STORE_TITLE_LEN];
     MultiByteToWideChar(CP_UTF8, 0, found ? t.title : sw->taskId, -1, wt,
                         _countof(wt));
