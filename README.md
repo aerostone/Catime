@@ -1,17 +1,14 @@
-> [!TIP]
+> [!NOTE]
 >
-> ### 💼 Looking for Remote Work Opportunities
+> ### 🍴 Fork 说明
 >
-> I'm currently looking for a **remote development position**. If your team is looking for a developer and you think my experience or open-source work could be a good fit, feel free to contact me at:
+> 本仓库是 [vladelaina/Catime](https://github.com/vladelaina/Catime) 的社区 Fork，基于 [Apache License 2.0](LICENSE) 修改并分发。原项目版权归 VladElaina 所有，图标/字体/壁纸授权见文末 [Copyright Notice](#️copyright-notice)。
 >
->
-> 我目前正在寻找一份远程开发相关的工作。如果您的团队正在寻找开发者，并且认为我的经验或开源项目经历可能适合你们，欢迎通过以下邮箱联系我：
->
-> 📧 [**vladelaina@gmail.com**](mailto:vladelaina@gmail.com)
+> 本 Fork 新增：TODO 本地任务 + 便签贴纸 + 任务列表（本周/本月/自定义日期筛选）+ tweek 后端同步、CI 全绿构建。问题反馈请提 [本仓库 Issues](https://github.com/aerostone/Catime/issues)。
 
 <div align="center">
 
-# v1.5.0 is out! 🎉 [Download Now](https://github.com/vladelaina/Catime/releases/latest) - `Only 995KB`!
+# v1.6.4 is out! 🎉 [Download Now](https://github.com/aerostone/Catime/releases/latest)
 </div>
 
 
@@ -122,7 +119,7 @@ Your tray icon can now come alive! Catime brings powerful custom animation featu
 
 - GitHub Releases
 
-  Download the latest release from [GitHub Releases](https://github.com/vladelaina/Catime/releases/latest).
+  Download the latest release from [GitHub Releases](https://github.com/aerostone/Catime/releases/latest).
 
 - Scoop
 
@@ -160,8 +157,8 @@ Reduce custom font file size by **90%+** with the official [Font Simplification 
 
 ## Getting Started
 
-```bash
-git clone https://github.com/vladelaina/Catime.git
+```
+git clone https://github.com/aerostone/Catime.git
 cd Catime
 
 # INSTALL DEPENDENCIES
@@ -264,11 +261,11 @@ build.bat                         # Windows
 
 ## 🌟Star History
 
-<a href="https://www.star-history.com/#vladelaina/Catime&Date">
+<a href="https://www.star-history.com/#aerostone/Catime&Date">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=vladelaina/Catime&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=vladelaina/Catime&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=vladelaina/Catime&type=Date" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=aerostone/Catime&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=aerostone/Catime&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=aerostone/Catime&type=Date" />
  </picture>
 </a>
 
@@ -517,7 +514,7 @@ Wallpaper:
 <div align="center">
 
 Copyright © 2025-2026 - **Catime**\
-By vladelaina\
+Original project by vladelaina · this fork maintained by aerostone\
 Made with ❤️ & ⌨️
 
 </div>
