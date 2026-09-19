@@ -834,12 +834,20 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Continue"
+          $global:LASTEXITCODE = 0
           ./.github/scripts/ci/build_mingw_i686.ps1 *>&1 | Tee-Object build-mingw.log
           $code = $LASTEXITCODE
+          if (-not $code) { $code = 0 }
+          Write-Output "MINGW-BUILD-EXIT:$code"
           if ($code -ne 0) {
-            Write-Output "::error::MinGW build failed; tail of build-mingw.log:"
-            Get-Content build-mingw.log | Select-Object -Last 40 | ForEach-Object { Write-Output "COPYABLE MINGW $_"; Write-Output "::error::MINGW $_" }
+            Write-Output "::error::MinGW build failed exit=$code; tail of build-mingw.log:"
+            Get-Content build-mingw.log | Select-Object -Last 60 | ForEach-Object { Write-Output "COPYABLE MINGW $_"; Write-Output "::error::MINGW $_" }
             exit $code
+          }
+          if (-not (Test-Path -LiteralPath "build/catime.exe" -PathType Leaf)) {
+            Write-Output "::error::MinGW script exited 0 but build/catime.exe missing; tail:"
+            Get-Content build-mingw.log | Select-Object -Last 60 | ForEach-Object { Write-Output "COPYABLE MINGW $_"; Write-Output "::error::MINGW $_" }
+            exit 1
           }
           New-Item -ItemType Directory -Path "output" -Force | Out-Null
           Copy-Item -LiteralPath "build/catime.exe" -Destination "output/catime.exe"
@@ -848,11 +856,14 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Continue"
+          $global:LASTEXITCODE = 0
           ./.github/scripts/ci/build_mingw_i686.ps1 -BuildDirectory build-debug -UiDebug ON *>&1 | Tee-Object build-mingw-debug.log
           $code = $LASTEXITCODE
+          if (-not $code) { $code = 0 }
+          Write-Output "MINGW-DEBUG-BUILD-EXIT:$code"
           if ($code -ne 0) {
-            Write-Output "::error::MinGW UIDebug build failed; tail of build-mingw-debug.log:"
-            Get-Content build-mingw-debug.log | Select-Object -Last 40 | ForEach-Object { Write-Output "COPYABLE MINGW-DBG $_"; Write-Output "::error::MINGW-DBG $_" }
+            Write-Output "::error::MinGW UIDebug build failed exit=$code; tail of build-mingw-debug.log:"
+            Get-Content build-mingw-debug.log | Select-Object -Last 60 | ForEach-Object { Write-Output "COPYABLE MINGW-DBG $_"; Write-Output "::error::MINGW-DBG $_" }
             exit $code
           }
           Copy-Item -LiteralPath "build-debug/catime.exe" -Destination "output/catime-uidebug.exe"
