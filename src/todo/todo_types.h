@@ -45,6 +45,7 @@ typedef struct {
     char dueDate[TODO_STORE_DATE_LEN];  /* deadline, YYYY-MM-DD or "" */
     char doneAt[TODO_STORE_DATE_LEN];   /* completion date or "" */
     char createdAt[TODO_STORE_DATE_LEN];/* creation date or "" */
+    BOOL pinned;                    /* sticky pinned (pin:1 in txt) */
 } TodoTask;
 
 /* Due date scope preset for the list dialog. */

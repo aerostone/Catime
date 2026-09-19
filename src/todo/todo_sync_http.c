@@ -117,6 +117,49 @@ BOOL TodoSyncHttp_Post(const char *url, const char *bearer, const char *bodyJson
     return SendJson(url, L"POST", bearer, bodyJson);
 }
 
+/* POST JSON and return the response body (caller frees). NULL on failure. */
+char *TodoSyncHttp_PostResp(const char *url, const char *bearer,
+                            const char *bodyJson) {
+    HINTERNET hConn = NULL, hNet = NULL;
+    HINTERNET hReq = OpenVerbRequest(url, L"POST", &hConn, &hNet);
+    if (!hReq) return NULL;
+    char heads[512];
+    _snprintf_s(heads, sizeof(heads), _TRUNCATE,
+                "Content-Type: application/json\r\nAuthorization: Bearer %s\r\n",
+                bearer ? bearer : "");
+    char *buf = NULL;
+    size_t cap = 8192, total = 0;
+    BOOL sent = HttpSendRequestA(hReq, heads, (DWORD)strlen(heads),
+                                 (LPVOID)bodyJson,
+                                 bodyJson ? (DWORD)strlen(bodyJson) : 0);
+    if (sent) {
+        buf = (char *)malloc(cap);
+        if (buf) {
+            for (;;) {
+                DWORD got = 0;
+                if (total + 2048 > cap) {
+                    cap *= 2;
+                    if (cap > TODO_RESP_MAX + 2048) break;
+                    char *nb = (char *)realloc(buf, cap);
+                    if (!nb) break;
+                    buf = nb;
+                }
+                if (!InternetReadFile(hReq, buf + total,
+                                      (DWORD)(cap - total - 1), &got) ||
+                    got == 0)
+                    break;
+                total += got;
+                if (total >= TODO_RESP_MAX) break;
+            }
+            buf[total] = '\0';
+        }
+    }
+    InternetCloseHandle(hReq);
+    InternetCloseHandle(hConn);
+    InternetCloseHandle(hNet);
+    return buf;
+}
+
 BOOL TodoSyncHttp_Patch(const char *url, const char *bearer, const char *bodyJson) {
     return SendJson(url, L"PATCH", bearer, bodyJson);
 }

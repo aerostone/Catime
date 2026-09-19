@@ -27,6 +27,7 @@ BOOL TodoStore_SetDone(const char *id, BOOL done);
 BOOL TodoStore_Remove(const char *id);
 BOOL TodoStore_SetImportance(const char *id, TodoImportance imp);
 BOOL TodoStore_SetDueDate(const char *id, const char *dueDate);
+BOOL TodoStore_SetPinned(const char *id, BOOL pinned);
 
 /* Count of local tasks (open + done). */
 int TodoStore_LocalCount(void);
@@ -43,9 +44,27 @@ void TodoStore_Reload(void);
 
 /* todo.ini path (UTF-8). Empty when store not initialized. */
 const char *TodoStore_IniPath(void);
+/* todo.txt path (UTF-8). Empty when store not initialized. */
+const char *TodoStore_TxtPath(void);
+/* Find local task by id (copy out). */
+BOOL TodoStore_FindById(const char *id, TodoTask *out);
+/* Upsert rows pulled from server (normalized, saved to txt). */
+BOOL TodoStore_UpdateFromSync(const char *id, const char *title,
+                              const char *dueDate, TodoImportance imp,
+                              BOOL done);
+BOOL TodoStore_InsertSynced(const char *id, const char *title,
+                            const char *dueDate, TodoImportance imp,
+                            BOOL done);
 
 /* Snapshot local tasks (for merged query). Returns items written. */
 int TodoStore_SnapshotLocal(TodoTask *out, int outCap);
+/* Lock/row accessors for the sync-upsert TU (caller must lock). */
+void TodoStore_Lock(void);
+void TodoStore_Unlock(void);
+int TodoStore_FindIndex(const char *id);
+int TodoStore_Count(void);
+TodoTask *TodoStore_RowAt(int index);
+void TodoStore_Save(void);
 
 #ifdef __cplusplus
 }

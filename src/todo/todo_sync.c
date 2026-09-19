@@ -68,6 +68,9 @@ static void DoPoll(void) {
     g_todoSyncCache = nc;
     LeaveCriticalSection(&g_todoSyncLock);
     if (g_todoSyncHwnd) InvalidateRect(g_todoSyncHwnd, NULL, TRUE);
+    /* entry-level bidirectional merge (pull changed_since + push dirty) */
+    void TodoSyncMerge_Run(const char *server, const char *token);
+    TodoSyncMerge_Run(server, token);
 }
 
 static unsigned __stdcall PollThread(void *arg) {

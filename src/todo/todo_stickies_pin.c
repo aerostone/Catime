@@ -21,21 +21,23 @@ static void SecFor(const char *taskId, char *out, size_t cap) {
 }
 
 BOOL TodoSticky_IsPinned(const char *taskId) {
-    const char *ini = TodoStore_IniPath();
-    if (!taskId || !taskId[0] || !ini || !ini[0]) return FALSE;
-    char sec[96];
-    SecFor(taskId, sec, sizeof(sec));
-    return GetPrivateProfileIntA(sec, "Pinned", 0, ini) != 0;
+    if (!taskId || !taskId[0]) return FALSE;
+    TodoFilter f;
+    TodoTask buf[TODO_STORE_MAX_TASKS];
+    TodoFilter_InitDefault(&f);
+    f.showDone = TRUE;
+    f.showLocal = TRUE;
+    f.showSync = FALSE;
+    int n = TodoStore_Query(&f, buf, TODO_STORE_MAX_TASKS);
+    for (int i = 0; i < n; i++) {
+        if (strcmp(buf[i].id, taskId) == 0) return buf[i].pinned;
+    }
+    return FALSE;
 }
 
 BOOL TodoSticky_SetPinned(const char *taskId, BOOL pinned) {
-    const char *ini = TodoStore_IniPath();
-    if (!taskId || !taskId[0] || !ini || !ini[0]) return FALSE;
-    char sec[96];
-    SecFor(taskId, sec, sizeof(sec));
-    char v[4];
-    _snprintf_s(v, sizeof(v), _TRUNCATE, "%d", pinned ? 1 : 0);
-    BOOL ok = WritePrivateProfileStringA(sec, "Pinned", v, ini) != 0;
+    if (!taskId || !taskId[0]) return FALSE;
+    BOOL ok = TodoStore_SetPinned(taskId, pinned);
     if (ok && pinned) TodoStickies_Show(taskId);
     if (ok && !pinned) TodoStickies_Hide(taskId);
     return ok;

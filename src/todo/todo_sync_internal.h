@@ -69,5 +69,7 @@ BOOL TodoSyncJson_LooksLocked(const char *title);
 char *TodoSyncHttp_Get(const char *url, const char *bearer);
 BOOL TodoSyncHttp_Post(const char *url, const char *bearer, const char *bodyJson);
 BOOL TodoSyncHttp_Patch(const char *url, const char *bearer, const char *bodyJson);
+char *TodoSyncHttp_PostResp(const char *url, const char *bearer,
+                            const char *bodyJson);
 
 #endif /* CATIME_TODO_SYNC_INTERNAL_H */
