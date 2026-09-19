@@ -834,8 +834,15 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Continue"
-          $global:LASTEXITCODE = 0
-          ./.github/scripts/ci/build_mingw_i686.ps1 *>&1 | Tee-Object build-mingw.log
+          try {
+            ./.github/scripts/ci/build_mingw_i686.ps1 *>&1 | Tee-Object build-mingw.log
+          } catch {
+            $code = 1
+            Write-Output "MINGW-BUILD-THREW: $($_.Exception.Message)"
+            Write-Output "::error::MINGW threw: $($_.Exception.Message)"
+            Get-Content build-mingw.log | Select-Object -Last 80 | ForEach-Object { Write-Output "COPYABLE MINGW $_"; Write-Output "::error::MINGW $_" }
+            exit $code
+          }
           $code = $LASTEXITCODE
           if (-not $code) { $code = 0 }
           Write-Output "MINGW-BUILD-EXIT:$code"
@@ -856,8 +863,15 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Continue"
-          $global:LASTEXITCODE = 0
-          ./.github/scripts/ci/build_mingw_i686.ps1 -BuildDirectory build-debug -UiDebug ON *>&1 | Tee-Object build-mingw-debug.log
+          try {
+            ./.github/scripts/ci/build_mingw_i686.ps1 -BuildDirectory build-debug -UiDebug ON *>&1 | Tee-Object build-mingw-debug.log
+          } catch {
+            $code = 1
+            Write-Output "MINGW-DEBUG-BUILD-THREW: $($_.Exception.Message)"
+            Write-Output "::error::MINGW-DBG threw: $($_.Exception.Message)"
+            Get-Content build-mingw-debug.log | Select-Object -Last 80 | ForEach-Object { Write-Output "COPYABLE MINGW-DBG $_"; Write-Output "::error::MINGW-DBG $_" }
+            exit $code
+          }
           $code = $LASTEXITCODE
           if (-not $code) { $code = 0 }
           Write-Output "MINGW-DEBUG-BUILD-EXIT:$code"

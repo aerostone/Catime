@@ -61,9 +61,13 @@ Write-Host "Unsigned x86 EXE size: $sizeKiB KiB"
 Write-Host "Release size budget: 1150.00 KiB"
 Write-Host "SHA-256: $sha256"
 
+$smokeArgs = "--ci-smoke --ci-exit-ms=1500"
+Write-Host "SMOKE-EXE: $($file.FullName)"
+Write-Host "SMOKE-ARGS: $smokeArgs"
 $smoke = Start-Process -FilePath $file.FullName `
-    -ArgumentList "--ci-smoke --ci-exit-ms=1500" `
+    -ArgumentList $smokeArgs `
     -WindowStyle Hidden -Wait -PassThru
+Write-Host "SMOKE-EXIT: $($smoke.ExitCode)"
 if ($smoke.ExitCode -ne 0) {
     throw "Win32 smoke test failed with exit code $($smoke.ExitCode)"
 }

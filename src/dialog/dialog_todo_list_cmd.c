@@ -17,7 +17,7 @@
 #include "dialog/dialog_todo_list_state.h"
 #include "todo/todo_conflict.h"
 
-TodoDlgState *TodoDlg_State(void);
+#include "dialog/dialog_todo_parts.h"
 void TodoDlg_RefreshList(HWND hdlg);
 
 
