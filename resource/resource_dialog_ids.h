@@ -171,6 +171,7 @@
 #define IDC_TODO_SYNC_URL 802             /**< Server URL edit */
 #define IDC_TODO_SYNC_TOKEN 803           /**< Token edit (password) */
 #define IDC_TODO_SYNC_POLL 804            /**< Poll interval edit */
+#define IDC_TODO_STICKY_TOPMOST 806       /**< Sticky default-topmost checkbox */
 
 /** @brief Custom text display dialog identifiers */
 #define IDD_CUSTOM_TEXT_DISPLAY_DIALOG 770      /**< Custom text display dialog */

@@ -43,6 +43,19 @@ void TodoStickies_Forget(const char *taskId) {
     if (sw->hwnd) DestroyWindow(sw->hwnd);
 }
 
+/* Re-apply effective topmost to all windows honoring global default
+ * (per-card override windows are left untouched). */
+void TodoSticky_RetopAll(void) {
+    for (int i = 0; i < TodoSticky_SlotCount(); i++) {
+        StickyWin *sw = TodoSticky_SlotAt(i);
+        if (!sw || !sw->used || !sw->hwnd) continue;
+        if (TodoSticky_TopmostOverride(sw->taskId) >= 0) continue;
+        BOOL top = TodoSticky_TopmostGlobal();
+        SetWindowPos(sw->hwnd, top ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0,
+                     0, 0, SWP_NOMOVE | SWP_NOSIZE);
+    }
+}
+
 BOOL TodoStickies_IsVisible(const char *taskId) {
     StickyWin *sw = TodoSticky_SlotById(taskId);
     if (!sw || !sw->hwnd) return FALSE;

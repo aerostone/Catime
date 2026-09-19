@@ -35,6 +35,8 @@ static void FillFromCurrent(HWND hdlg) {
     /* empty URL/token -> disable sync controls except enable box */
     BOOL hasBackend = url[0] != '\0' && token[0] != '\0';
     EnableWindow(GetDlgItem(hdlg, IDC_TODO_SETTINGS_SYNC_BTN), hasBackend && en);
+    CheckDlgButton(hdlg, IDC_TODO_STICKY_TOPMOST,
+                   TodoSticky_TopmostGlobal() ? BST_CHECKED : BST_UNCHECKED);
 }
 
 static BOOL CollectAndSave(HWND hdlg) {
@@ -61,6 +63,12 @@ static BOOL CollectAndSave(HWND hdlg) {
     }
     TodoSync_Reload();
     if (en) TodoSync_PollNow();
+    /* sticky default-topmost: live-apply to inherit-mode windows */
+    BOOL top = IsDlgButtonChecked(hdlg, IDC_TODO_STICKY_TOPMOST) == BST_CHECKED;
+    if (top != TodoSticky_TopmostGlobal()) {
+        TodoSticky_SetTopmostGlobal(top);
+        TodoSticky_RetopAll();
+    }
     return TRUE;
 }
 

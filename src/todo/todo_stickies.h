@@ -39,6 +39,7 @@ void TodoSticky_SetTopmostGlobal(BOOL topmost);
 int TodoSticky_TopmostOverride(const char *taskId);
 void TodoSticky_SetTopmostOverride(const char *taskId, int mode);
 BOOL TodoSticky_TopmostFor(const char *taskId);
+void TodoSticky_RetopAll(void);
 
 #ifdef __cplusplus
 }
