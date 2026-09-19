@@ -9,6 +9,7 @@
  * z-order per override. FindCatimeMainWindow locates the main HWND
  * for launching the shared pomodoro timer.
  */
+#include <stdio.h>
 #include <string.h>
 
 #include "todo_stickies.h"

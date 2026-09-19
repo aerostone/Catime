@@ -9,6 +9,7 @@
 #include "todo_sync_internal.h"
 #include "todo_sync_status.h"
 #include "todo_types.h"
+#include "todo_store.h"
 #include "config/config_ini_api.h"
 
 CRITICAL_SECTION g_todoSyncLock;

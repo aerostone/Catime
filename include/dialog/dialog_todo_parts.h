@@ -11,6 +11,7 @@
 #include <windows.h>
 
 #include "todo/todo_store.h"
+#include "dialog/dialog_todo_list_state.h"
 
 void TodoDlg_ApplyScopeRange(TodoFilter *f);
 void TodoDlg_InitCombos(HWND hdlg);

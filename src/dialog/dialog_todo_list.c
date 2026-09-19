@@ -27,7 +27,6 @@
 #include "todo/todo_conflict.h"
 #include "todo/todo_ui_debug.h"
 
-#include "dialog/dialog_todo_list_state.h"
 
 #ifndef EM_SETCUEBANNER
 #define EM_SETCUEBANNER (0x1501)
