@@ -23,6 +23,7 @@
 extern "C" {
 #endif
 
+#ifdef CATIME_UI_DEBUG
 /* Runtime state: call once at startup (reads env + ini). */
 void TodoUiDebug_Init(const char *iniDirA);
 /* Any-layer enable check (cheap cached flag). */
@@ -33,6 +34,25 @@ void TodoUiDebug_DumpDialog(HWND hdlg, const char *tag);
 void TodoUiDebug_PaintOverlay(HWND hdlg);
 /* Toggle at runtime (settings checkbox), persists to ini. */
 void TodoUiDebug_SetEnabled(BOOL on);
+#else
+/* Release: zero-cost stubs (nothing linked, checkbox hidden). */
+static __inline void TodoUiDebug_Init(const char *iniDirA) {
+    (void)iniDirA;
+}
+static __inline BOOL TodoUiDebug_Enabled(void) {
+    return FALSE;
+}
+static __inline void TodoUiDebug_DumpDialog(HWND hdlg, const char *tag) {
+    (void)hdlg;
+    (void)tag;
+}
+static __inline void TodoUiDebug_PaintOverlay(HWND hdlg) {
+    (void)hdlg;
+}
+static __inline void TodoUiDebug_SetEnabled(BOOL on) {
+    (void)on;
+}
+#endif
 
 #ifdef __cplusplus
 }

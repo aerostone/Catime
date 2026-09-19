@@ -9,6 +9,8 @@
  */
 #include "todo_ui_debug.h"
 
+#ifdef CATIME_UI_DEBUG
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -140,3 +142,5 @@ void TodoUiDebug_PaintOverlay(HWND hdlg) {
     if (pen) DeleteObject(pen);
     ReleaseDC(hdlg, hdc);
 }
+
+#endif /* CATIME_UI_DEBUG */

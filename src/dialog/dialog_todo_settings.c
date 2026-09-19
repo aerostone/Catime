@@ -76,8 +76,12 @@ static void FillFromCurrent(HWND hdlg) {
     RefreshStatusLine(hdlg);
     CheckDlgButton(hdlg, IDC_TODO_STICKY_TOPMOST,
                    TodoSticky_TopmostGlobal() ? BST_CHECKED : BST_UNCHECKED);
+#ifdef CATIME_UI_DEBUG
     CheckDlgButton(hdlg, IDC_TODO_DEBUG_CHECK,
                    TodoUiDebug_Enabled() ? BST_CHECKED : BST_UNCHECKED);
+#else
+    ShowWindow(GetDlgItem(hdlg, IDC_TODO_DEBUG_CHECK), SW_HIDE);
+#endif
 }
 
 static BOOL CollectAndSave(HWND hdlg) {
@@ -119,8 +123,10 @@ static BOOL CollectAndSave(HWND hdlg) {
         TodoSticky_SetTopmostGlobal(top);
         TodoSticky_RetopAll();
     }
+#ifdef CATIME_UI_DEBUG
     TodoUiDebug_SetEnabled(
         IsDlgButtonChecked(hdlg, IDC_TODO_DEBUG_CHECK) == BST_CHECKED);
+#endif
     return TRUE;
 }
 
