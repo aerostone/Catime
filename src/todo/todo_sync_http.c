@@ -7,6 +7,7 @@
  * - No third-party deps.
  */
 #include "todo_sync_internal.h"
+#include "todo_sync_status.h"
 
 #pragma comment(lib, "wininet.lib")
 
@@ -32,6 +33,18 @@ char *TodoSyncHttp_Get(const char *url, const char *bearer) {
                             (bearer && *bearer) ? (DWORD)wcslen(whead) : 0,
                             INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE, 0);
     if (!hUrl) { InternetCloseHandle(hNet); return NULL; }
+    {
+        DWORD sc = 0, scl = sizeof(sc);
+        if (HttpQueryInfoW(hUrl, HTTP_QUERY_STATUS_CODE | HTTP_QUERY_FLAG_NUMBER,
+                           &sc, &scl, NULL) && (sc == 401 || sc == 403)) {
+            /* stash auth failure for the status line; body unusable */
+            TodoSyncStatus_Report(TODO_SYNC_STATE_AUTH, (int)sc);
+            InternetCloseHandle(hUrl);
+            InternetCloseHandle(hNet);
+            free(buf);
+            return NULL;
+        }
+    }
     buf = (char *)malloc(cap);
     if (!buf) { InternetCloseHandle(hUrl); InternetCloseHandle(hNet); return NULL; }
     for (;;) {

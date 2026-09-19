@@ -16,7 +16,8 @@ LRESULT CmdTodoList(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT CmdTodoNew(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    ShowTodoListDialog(hwnd);
+    /* A2 fix: real difference -- open list focused on the title edit. */
+    ShowTodoListDialogForNew(hwnd);
     return 0;
 }
 

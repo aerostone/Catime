@@ -8,6 +8,8 @@
 #include <windows.h>
 
 void ShowTodoListDialog(HWND hwndParent);
+void ShowTodoListDialogForNew(HWND hwndParent);
+void TodoDlg_Preselect(const char *taskId);
 void ShowTodoSettingsDialog(HWND hwndParent);
 
 #endif /* CATIME_DIALOG_TODO_H */

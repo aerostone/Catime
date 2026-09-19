@@ -1,5 +1,6 @@
 param(
-    [string]$BuildDirectory = "build"
+    [string]$BuildDirectory = "build",
+    [string]$UiDebug = "OFF"
 )
 
 $ErrorActionPreference = "Stop"
@@ -23,7 +24,8 @@ $make = (Join-Path $env:WINLIBS_BIN "mingw32-make.exe").Replace('\', '/')
     "-DCMAKE_RC_COMPILER=$windres" `
     "-DCMAKE_MAKE_PROGRAM=$make" `
     "-DCATIME_RELEASE_OPTIMIZATION=-Oz" `
-    "-DCATIME_COMPRESS_EMBEDDED_ASSETS=OFF"
+    "-DCATIME_COMPRESS_EMBEDDED_ASSETS=OFF" `
+    "-DCATIME_UI_DEBUG=$UiDebug"
 if ($LASTEXITCODE -ne 0) {
     throw "CMake configuration failed"
 }
@@ -46,9 +48,12 @@ if ($LASTEXITCODE -ne 0 -or $peHeader -notmatch "file format pei-i386") {
 }
 
 $file = Get-Item -LiteralPath $executable
-$maximumReleaseBytes = 1150 * 1KB
-if ($file.Length -gt $maximumReleaseBytes) {
-    throw "Release binary exceeds the 1150 KiB size budget: $($file.Length) bytes"
+# UIDebug artifact is exempt from the size budget (overlay + logs).
+if ($UiDebug -ne "ON") {
+    $maximumReleaseBytes = 1150 * 1KB
+    if ($file.Length -gt $maximumReleaseBytes) {
+        throw "Release binary exceeds the 1150 KiB size budget: $($file.Length) bytes"
+    }
 }
 $sizeKiB = "{0:F2}" -f ($file.Length / 1KB)
 $sha256 = (Get-FileHash -LiteralPath $executable -Algorithm SHA256).Hash

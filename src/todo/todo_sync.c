@@ -7,6 +7,7 @@
  * todo_sync_http.c (shared state via todo_sync_internal.h).
  */
 #include "todo_sync_internal.h"
+#include "todo_sync_status.h"
 #include "todo_types.h"
 #include "config/config_ini_api.h"
 
@@ -55,7 +56,10 @@ static void DoPoll(void) {
     char url[TODO_URL_LEN + 64];
     _snprintf_s(url, sizeof(url), _TRUNCATE, "%s/api/catime/sync?top=%d", server, TODO_MAX_TASKS);
     char *resp = TodoSyncHttp_Get(url, token);
-    if (!resp) return; /* offline: keep old cache */
+    if (!resp) {
+        TodoSyncStatus_Report(TODO_SYNC_STATE_OFFLINE, 0);
+        return; /* offline: keep old cache */
+    }
     TodoCache nc;
     memset(&nc, 0, sizeof(nc));
     nc.todayCount = TodoSyncJson_ParseItemArray(resp, "today_open", nc.today, TODO_MAX_TASKS);
@@ -68,6 +72,9 @@ static void DoPoll(void) {
     EnterCriticalSection(&g_todoSyncLock);
     g_todoSyncCache = nc;
     LeaveCriticalSection(&g_todoSyncLock);
+    {
+        TodoSyncStatus_Report(TODO_SYNC_STATE_OK, 200);
+    }
     if (g_todoSyncHwnd) InvalidateRect(g_todoSyncHwnd, NULL, TRUE);
     /* entry-level bidirectional merge (pull changed_since + push dirty) */
     void TodoSyncMerge_Run(const char *server, const char *token);

@@ -172,6 +172,13 @@
 #define IDC_TODO_SYNC_TOKEN 803           /**< Token edit (password) */
 #define IDC_TODO_SYNC_POLL 804            /**< Poll interval edit */
 #define IDC_TODO_STICKY_TOPMOST 806       /**< Sticky default-topmost checkbox */
+#define IDC_TODO_SYNC_STATUS 807          /**< Sync status line in settings */
+#define IDC_TODO_CONFLICT_BTN 808         /**< Open conflict dir button */
+#define IDC_TODO_DEBUG_CHECK 809          /**< UI debug overlay toggle */
+#define IDC_TODO_GROUP_TIME 810           /**< List dialog time-range group */
+#define IDC_TODO_GROUP_STATE 811          /**< List dialog state/search group */
+#define IDC_TODO_GROUP_SYNC 812           /**< Settings sync group */
+#define IDC_TODO_GROUP_STICKY 813         /**< Settings sticky group */
 
 /** @brief Custom text display dialog identifiers */
 #define IDD_CUSTOM_TEXT_DISPLAY_DIALOG 770      /**< Custom text display dialog */

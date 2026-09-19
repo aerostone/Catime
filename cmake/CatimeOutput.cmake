@@ -39,3 +39,12 @@ option(ENABLE_DEBUG "Enable debug mode" OFF)
 if(ENABLE_DEBUG)
     target_compile_definitions(catime PRIVATE DEBUG_MODE)
 endif()
+
+# UIDebug overlay switch (other CS convention: separate debug artifact).
+# - CATIME_UI_DEBUG=ON  -> compile overlay code enabled by default
+#   (runtime [Debug] UiDebug=0 / CATIME_UI_DEBUG=0 can still mute it).
+# - OFF (release default) -> overlay compiled out, zero hot-path cost.
+option(CATIME_UI_DEBUG "Enable TODO UI debug overlay by default" OFF)
+if(CATIME_UI_DEBUG)
+    target_compile_definitions(catime PRIVATE CATIME_UI_DEBUG=1)
+endif()

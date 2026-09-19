@@ -132,7 +132,9 @@ static LRESULT CALLBACK StickyProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         int x = GET_X_LPARAM(lp);
         RECT rc;
         GetClientRect(hwnd, &rc);
-        if (x >= rc.right - 26 && y <= STICKY_BAR_H) {
+        /* D2: rightmost 18px hides (= unpin); pin glyph 40..18 toggles.
+         * Neither claims to be "close": symbols are ◉/○/–. */
+        if (x >= rc.right - 18 && y <= STICKY_BAR_H) {
             TodoSticky_SetPinned(sw->taskId, FALSE);
             return 0;
         }
@@ -280,4 +282,5 @@ void TodoStickies_Show(const char *taskId) {
         return;
     }
     ShowWindow(sw->hwnd, SW_SHOW);
+    TodoSticky_UpdateTips(sw->hwnd, sw->collapsed);
 }

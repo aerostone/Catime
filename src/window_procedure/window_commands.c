@@ -195,6 +195,8 @@ BOOL DispatchRangeCommand(HWND hwnd, UINT cmd, WPARAM wp, LPARAM lp) {
          HandleFontSelection},
         {TODO_MENU_TASK_BASE, TODO_MENU_TASK_BASE + 4,
          HandleTodoMenuRow},
+        {5700, 5700,
+         HandleTodoMenuConflict},
         {0, 0, NULL}
     };
     for (const RangeCommandDescriptor* range = ranges;

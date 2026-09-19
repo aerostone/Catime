@@ -837,6 +837,19 @@ jobs:
           New-Item -ItemType Directory -Path "output" -Force | Out-Null
           Copy-Item -LiteralPath "build/catime.exe" -Destination "output/catime.exe"
 
+      - name: Build UIDebug artifact (overlay ON, exempt from size budget)
+        shell: pwsh
+        run: |
+          ./.github/scripts/ci/build_mingw_i686.ps1 -BuildDirectory build-debug -UiDebug ON
+          Copy-Item -LiteralPath "build-debug/catime.exe" -Destination "output/catime-uidebug.exe"
+
+      - name: Upload UIDebug artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: catime-uidebug-${{ env.VERSION }}-${{ github.run_number }}
+          path: output/catime-uidebug.exe
+          retention-days: 14
+
       - name: Rename output file
         id: rename_output
         shell: pwsh

@@ -86,23 +86,39 @@ void TodoSticky_ShowRowMenu(HWND hwnd, StickyWin *sw) {
     }
     HMENU m = CreatePopupMenu();
     if (!m) return;
+    /* D5+D7: gray header anchors the task; labels localized. */
+    extern const wchar_t *GetLocalizedString(const wchar_t *, const wchar_t *);
     wchar_t wt[TODO_STORE_TITLE_LEN];
     MultiByteToWideChar(CP_UTF8, 0, found ? t.title : sw->taskId, -1, wt,
                         _countof(wt));
-    wchar_t pomo[160];
-    _snwprintf_s(pomo, _countof(pomo), _TRUNCATE, L"\u25b6 \u5f00\u59cb\u756a\u8304\uff08%s\uff09", wt);
+    wchar_t head[TODO_STORE_TITLE_LEN + 4];
+    wcsncpy_s(head, _countof(head), wt, 20);
+    head[20] = L'\0';
+    if (found && wcslen(wt) > 20) wcscat_s(head, _countof(head), L"\u2026");
+    AppendMenuW(m, MF_STRING | MF_DISABLED | MF_GRAYED, 0, head);
+    AppendMenuW(m, MF_SEPARATOR, 0, NULL);
+    wchar_t pomo[48];
+    _snwprintf_s(pomo, _countof(pomo), _TRUNCATE, L"\u25b6 %s",
+                 GetLocalizedString(L"\u5f00\u59cb\u756a\u8304", L"Start pomodoro"));
     AppendMenuW(m, MF_STRING, STICKY_MENU_POMO, pomo);
     AppendMenuW(m, MF_STRING, STICKY_MENU_DONE,
-                (found && t.done) ? L"\u6807\u4e3a\u672a\u5b8c\u6210" : L"\u6807\u4e3a\u5b8c\u6210");
+                (found && t.done) ? GetLocalizedString(L"\u6807\u4e3a\u672a\u5b8c\u6210", L"Mark open")
+                                    : GetLocalizedString(L"\u6807\u4e3a\u5b8c\u6210", L"Mark done"));
     AppendMenuW(m, MF_SEPARATOR, 0, NULL);
     AppendMenuW(m, MF_STRING, STICKY_MENU_EXPAND,
-                sw->collapsed ? L"\u5c55\u5f00" : L"\u6536\u8d77");
+                sw->collapsed ? GetLocalizedString(L"\u5c55\u5f00", L"Expand")
+                                : GetLocalizedString(L"\u6536\u8d77", L"Collapse"));
     AppendMenuW(m, MF_STRING | (TodoSticky_TopmostFor(sw->taskId) ? MF_CHECKED : 0),
-                STICKY_MENU_TOPMOST, L"\u7f6e\u9876\u6b64\u5361");
-    AppendMenuW(m, MF_STRING, STICKY_MENU_RENAME, L"\u91cd\u547d\u540d\u2026");
+                STICKY_MENU_TOPMOST,
+                GetLocalizedString(L"\u7f6e\u9876\u6b64\u5361", L"Pin on top"));
+    AppendMenuW(m, MF_STRING, STICKY_MENU_RENAME,
+                GetLocalizedString(L"\u91cd\u547d\u540d\u2026", L"Rename..."));
     AppendMenuW(m, MF_SEPARATOR, 0, NULL);
-    AppendMenuW(m, MF_STRING, STICKY_MENU_UNPIN, L"\u53d6\u6d88\u7f6e\u9876");
-    AppendMenuW(m, MF_STRING, STICKY_MENU_DELETE, L"\u5220\u9664\u4efb\u52a1");
+    AppendMenuW(m, MF_STRING, STICKY_MENU_UNPIN,
+                GetLocalizedString(L"\u53d6\u6d88\u7f6e\u9876", L"Unpin"));
+    /* D3: delete sits last + confirms (see RunMenuById). */
+    AppendMenuW(m, MF_STRING, STICKY_MENU_DELETE,
+                GetLocalizedString(L"\u5220\u9664\u4efb\u52a1\u2026", L"Delete task..."));
     POINT pt;
     GetCursorPos(&pt);
     UINT cmd = TrackPopupMenu(m, TPM_RETURNCMD, pt.x, pt.y, 0, hwnd, NULL);
@@ -136,6 +152,13 @@ void TodoSticky_RunMenuById(HWND hwnd, StickyWin *sw, unsigned cmd) {
     } else if (cmd == STICKY_MENU_UNPIN) {
         TodoSticky_SetPinned(taskId, FALSE);
     } else if (cmd == STICKY_MENU_DELETE) {
+        int rc = MessageBoxW(hwnd,
+            GetLocalizedString(
+                L"\u5220\u9664\u540e\u5c06\u540c\u6b65\u5220\u9664\u670d\u52a1\u7aef\u4efb\u52a1\uff0c\u786e\u8ba4\u5220\u9664\uff1f",
+                L"Delete will also remove the server task on next sync. Delete?"),
+            GetLocalizedString(L"TODO", L"TODO"),
+            MB_OKCANCEL | MB_ICONWARNING);
+        if (rc != IDOK) return;
         char id[TODO_STORE_ID_LEN];
         strcpy_s(id, sizeof(id), taskId);
         TodoStickies_Forget(id);
@@ -143,6 +166,7 @@ void TodoSticky_RunMenuById(HWND hwnd, StickyWin *sw, unsigned cmd) {
     } else if (cmd == STICKY_MENU_EXPAND) {
         if (sw->collapsed) TodoSticky_SetCollapsedUI(hwnd, sw, FALSE);
         else TodoSticky_SetCollapsedUI(hwnd, sw, TRUE);
+        TodoSticky_UpdateTips(hwnd, sw->collapsed);
     } else if (cmd == STICKY_MENU_TOPMOST) {
         int ov = TodoSticky_TopmostOverride(taskId);
         int next = (ov == 1) ? 0 : 1;

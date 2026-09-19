@@ -51,35 +51,56 @@ void TodoSticky_PaintEx(HDC hdc, const RECT *rc, const TodoTask *t,
     if (fTitle) SelectObject(hdc, fTitle);
     SetTextColor(hdc, RGB(40, 40, 40));
     RECT tr = bar;
-    tr.left += 8; tr.right -= 30;
+    tr.left += 8; tr.right = bar.right - 74; /* D1: reserve 70px glyph zone */
+    wchar_t mark[8] = L"";
+    switch (t->importance) {
+    case TODO_IMPORTANCE_HIGH: wcscpy_s(mark, _countof(mark), L"[!] "); break;
+    case TODO_IMPORTANCE_MEDIUM: wcscpy_s(mark, _countof(mark), L"[B] "); break;
+    case TODO_IMPORTANCE_LOW: wcscpy_s(mark, _countof(mark), L"[C] "); break;
+    default: break;
+    }
+    if (t->done) wcscpy_s(mark, _countof(mark), L"[x] ");
     wchar_t wt[TODO_STORE_TITLE_LEN];
     if (MultiByteToWideChar(CP_UTF8, 0, t->title, -1, wt, _countof(wt))) {
-        DrawTextW(hdc, wt, -1, &tr,
+        wchar_t full[TODO_STORE_TITLE_LEN + 8];
+        _snwprintf_s(full, _countof(full), _TRUNCATE, L"%s%s", mark, wt);
+        DrawTextW(hdc, full, -1, &tr,
                   DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS | DT_NOPREFIX);
     }
     /* collapse glyph + close "x" hint */
     if (fBody) SelectObject(hdc, fBody);
     SetTextColor(hdc, RGB(90, 90, 90));
     RECT xr = bar;
-    xr.left = xr.right - 44;
-    xr.right -= 26;
+    xr.left = xr.right - 70;
+    xr.right = xr.right - 44;
     DrawTextW(hdc, collapsed ? L"[+]" : L"[-]", -1, &xr,
               DT_CENTER | DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
+    /* D2: pin-state glyph (◉ pinned / ○ unpinned), not a close X. */
     RECT cr = bar;
-    cr.left = cr.right - 26;
-    DrawTextW(hdc, L"x", -1, &cr, DT_CENTER | DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
+    cr.left = cr.right - 40;
+    cr.right = cr.right - 18;
+    DrawTextW(hdc, t->pinned ? L"\u25c9" : L"\u25cb", -1, &cr,
+              DT_CENTER | DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
+    RECT hr = bar;
+    hr.left = hr.right - 18;
+    DrawTextW(hdc, L"\u2013", -1, &hr,
+              DT_CENTER | DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
     if (pomoRemSec > 0) {
+        /* D1 fix: countdown lives in the body, never over the title. */
         wchar_t pomo[32];
-        _snwprintf_s(pomo, _countof(pomo), _TRUNCATE, L"\u5515 %d:%02d ",
+        _snwprintf_s(pomo, _countof(pomo), _TRUNCATE, L"\u5515 %d:%02d",
                      pomoRemSec / 60, pomoRemSec % 60);
-        RECT pr = bar;
-        pr.left += 8;
-        DrawTextW(hdc, pomo, -1, &pr,
-                  DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
+        RECT br0 = *rc;
+        br0.top += barH + 6; br0.left += 8; br0.right -= 8;
+        br0.bottom = br0.top + 18;
+        SetTextColor(hdc, RGB(185, 28, 28));
+        DrawTextW(hdc, pomo, -1, &br0,
+                  DT_LEFT | DT_TOP | DT_NOPREFIX | DT_SINGLELINE);
     }
-    /* body: due date line + done state */
+    /* body: due date line + done state (D4: gesture hint rotates) */
+    static volatile LONG s_hintFlip = 0;
     RECT br = *rc;
-    br.top += barH + 6; br.left += 8; br.right -= 8; br.bottom -= 6;
+    br.top += barH + 6 + (pomoRemSec > 0 ? 20 : 0); br.left += 8; br.right -= 8; br.bottom -= 6;
     SetTextColor(hdc, t->done ? RGB(140, 140, 140) : RGB(60, 60, 60));
     wchar_t info[64] = L"";
     if (t->dueDate[0]) {
@@ -89,8 +110,10 @@ void TodoSticky_PaintEx(HDC hdc, const RECT *rc, const TodoTask *t,
                          wd, t->done ? L" · 已完成" : L"");
     } else if (t->done) {
         wcscpy_s(info, _countof(info), L"已完成");
-    } else {
+    } else if ((InterlockedIncrement(&s_hintFlip) / 60) % 2 == 0) {
         wcscpy_s(info, _countof(info), L"双击编辑内容");
+    } else {
+        wcscpy_s(info, _countof(info), L"双击标题栏收起");
     }
     DrawTextW(hdc, info, -1, &br, DT_LEFT | DT_TOP | DT_NOPREFIX);
 }

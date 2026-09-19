@@ -8,5 +8,7 @@
 #include <windows.h>
 
 void BuildTodoMenu(HMENU hMenu);
+BOOL HandleTodoMenuConflict(HWND hwnd, UINT cmd, int index);
+UINT TodoMenu_ConflictId(void);
 
 #endif /* CATIME_TRAY_MENU_TODO_H */

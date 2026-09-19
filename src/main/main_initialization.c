@@ -210,6 +210,16 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
         wchar_t iniW[MAX_PATH] = L"";
         GetConfigPath(iniA, sizeof(iniA));
         if (iniA[0]) MultiByteToWideChar(CP_UTF8, 0, iniA, -1, iniW, _countof(iniW));
+        {
+            /* UIDebug: dir of config.ini (env + [Debug] UiDebug layers). */
+            extern void TodoUiDebug_Init(const char *iniDirA);
+            char dirA[MAX_PATH] = "";
+            strcpy_s(dirA, sizeof(dirA), iniA);
+            char *sep = strrchr(dirA, '\\');
+            if (!sep) sep = strrchr(dirA, '/');
+            if (sep) *sep = '\0';
+            TodoUiDebug_Init(dirA);
+        }
         TodoSync_Init(hwnd, iniW[0] ? iniW : NULL);
         TodoStore_Init(iniW[0] ? iniW : NULL);
         TodoStickies_RestoreAll();
