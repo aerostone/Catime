@@ -833,14 +833,28 @@ jobs:
       - name: Build application
         shell: pwsh
         run: |
-          ./.github/scripts/ci/build_mingw_i686.ps1
+          $ErrorActionPreference = "Continue"
+          ./.github/scripts/ci/build_mingw_i686.ps1 *>&1 | Tee-Object build-mingw.log
+          $code = $LASTEXITCODE
+          if ($code -ne 0) {
+            Write-Output "::error::MinGW build failed; tail of build-mingw.log:"
+            Get-Content build-mingw.log | Select-Object -Last 40 | ForEach-Object { Write-Output "COPYABLE MINGW $_"; Write-Output "::error::MINGW $_" }
+            exit $code
+          }
           New-Item -ItemType Directory -Path "output" -Force | Out-Null
           Copy-Item -LiteralPath "build/catime.exe" -Destination "output/catime.exe"
 
       - name: Build UIDebug artifact (overlay ON, exempt from size budget)
         shell: pwsh
         run: |
-          ./.github/scripts/ci/build_mingw_i686.ps1 -BuildDirectory build-debug -UiDebug ON
+          $ErrorActionPreference = "Continue"
+          ./.github/scripts/ci/build_mingw_i686.ps1 -BuildDirectory build-debug -UiDebug ON *>&1 | Tee-Object build-mingw-debug.log
+          $code = $LASTEXITCODE
+          if ($code -ne 0) {
+            Write-Output "::error::MinGW UIDebug build failed; tail of build-mingw-debug.log:"
+            Get-Content build-mingw-debug.log | Select-Object -Last 40 | ForEach-Object { Write-Output "COPYABLE MINGW-DBG $_"; Write-Output "::error::MINGW-DBG $_" }
+            exit $code
+          }
           Copy-Item -LiteralPath "build-debug/catime.exe" -Destination "output/catime-uidebug.exe"
 
       - name: Upload UIDebug artifact
