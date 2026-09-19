@@ -210,7 +210,6 @@ BOOL TodoSync_OnPomodoroComplete(const char *taskId, int minutes) {
         } else {
             TodoTask lt;
             memset(&lt, 0, sizeof(lt));
-            extern BOOL TodoStore_FindById(const char *id, TodoTask *out);
             if (TodoStore_FindById(taskId, &lt) && lt.serverId[0])
                 strcpy_s(tid, sizeof(tid), lt.serverId);
             else

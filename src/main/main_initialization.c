@@ -23,6 +23,7 @@
 #include "todo/todo_stickies.h"
 #include "todo/todo_store.h"
 #include "todo/todo_sync.h"
+#include "todo/todo_ui_debug.h"
 #include "utils/package_identity.h"
 #include "utils/string_convert.h"
 #include "window/window_desktop_integration.h"
@@ -212,7 +213,7 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
         if (iniA[0]) MultiByteToWideChar(CP_UTF8, 0, iniA, -1, iniW, _countof(iniW));
         {
             /* UIDebug: dir of config.ini (env + [Debug] UiDebug layers). */
-            extern void TodoUiDebug_Init(const char *iniDirA);
+
             char dirA[MAX_PATH] = "";
             strcpy_s(dirA, sizeof(dirA), iniA);
             char *sep = strrchr(dirA, '\\');

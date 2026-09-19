@@ -21,6 +21,7 @@
 #include "todo/todo_store.h"
 #include "todo/todo_stickies.h"
 #include "todo/todo_sync.h"
+#include "dialog/dialog_todo_parts.h"
 #include "todo/todo_rowmark.h"
 #include "todo/todo_sync_status.h"
 #include "todo/todo_conflict.h"
@@ -59,11 +60,11 @@ TodoDlgState *TodoDlg_State(void) {
 }
 
 static void ApplyScopeRange(TodoFilter *f) {
-    extern void TodoDlg_ApplyScopeRange(TodoFilter *f);
+
     TodoDlg_ApplyScopeRange(f);
 }
 
-static void ReadFilterFromUI(HWND hdlg, TodoFilter *f) {
+void TodoDlg_ReadFilterImpl(HWND hdlg, TodoFilter *f) {
     TodoFilter_InitDefault(f);
     LRESULT scope = SendDlgItemMessageW(hdlg, IDC_TODO_FILTER_DUE_SCOPE,
                                         CB_GETCURSEL, 0, 0);
@@ -105,13 +106,13 @@ static void ReadFilterFromUI(HWND hdlg, TodoFilter *f) {
 
 /* Exported for dialog_todo_list_cmd.c: current UI filter snapshot. */
 void TodoDlg_ReadFilter(HWND hdlg, TodoFilter *f) {
-    ReadFilterFromUI(hdlg, f);
+    TodoDlg_ReadFilterImpl(hdlg, f);
 }
 
 void TodoDlg_RefreshList(HWND hdlg);
 
 static void RefreshList(HWND hdlg) {
-    extern void TodoDlg_RefreshInto(HWND hdlg);
+
     TodoDlg_RefreshInto(hdlg);
 }
 
@@ -123,7 +124,7 @@ void TodoDlg_OnSelect(HWND hdlg, int listIndex);
 void ShowTodoSettingsDialog(HWND hwndParent);
 
 static void InitCombos(HWND hdlg) {
-    extern void TodoDlg_InitCombos(HWND hdlg);
+
     TodoDlg_InitCombos(hdlg);
 }
 

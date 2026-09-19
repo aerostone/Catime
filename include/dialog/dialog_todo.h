@@ -7,9 +7,12 @@
 
 #include <windows.h>
 
+#include "todo/todo_store.h"
+
 void ShowTodoListDialog(HWND hwndParent);
 void ShowTodoListDialogForNew(HWND hwndParent);
 void TodoDlg_Preselect(const char *taskId);
+void TodoDlg_ReadFilter(HWND hdlg, TodoFilter *f);
 void ShowTodoSettingsDialog(HWND hwndParent);
 
 #endif /* CATIME_DIALOG_TODO_H */

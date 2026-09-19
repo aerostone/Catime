@@ -29,11 +29,6 @@ BOOL TodoStickyEdit_Commit(const char *oldId, const wchar_t *newTitle,
 void TodoSticky_LoadGeom(const char *taskId, int *x, int *y, int *w, int *h);
 void TodoSticky_SaveGeom(const char *taskId, int x, int y, int w, int h);
 COLORREF TodoSticky_BarColor(TodoImportance imp, BOOL done);
-void TodoSticky_Paint(HDC hdc, const RECT *rc, const TodoTask *t,
-                      HFONT fTitle, HFONT fBody);
-void TodoSticky_PaintEx(HDC hdc, const RECT *rc, const TodoTask *t,
-                        HFONT fTitle, HFONT fBody, BOOL collapsed,
-                        int pomoRemSec);
 
 #include "todo_stickies_slot.h"
 

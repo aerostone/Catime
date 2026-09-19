@@ -11,9 +11,19 @@
 
 #include <windows.h>
 
+#include "todo/todo_types.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/* Paint one sticky card (legacy wrapper: expanded, no pomo countdown). */
+void TodoSticky_Paint(HDC hdc, const RECT *rc, const TodoTask *t,
+                      HFONT fTitle, HFONT fBody);
+/* Full paint: collapsed glyph + pomo countdown row. */
+void TodoSticky_PaintEx(HDC hdc, const RECT *rc, const TodoTask *t,
+                        HFONT fTitle, HFONT fBody, BOOL collapsed,
+                        int pomoRemSec);
 
 /* Show (or create window for) one sticky by local task id. */
 void TodoStickies_Show(const char *taskId);

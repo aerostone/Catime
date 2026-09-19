@@ -9,6 +9,7 @@
 #include <windows.h>
 #include <stdio.h>
 
+#include "todo_stickies.h"
 #include "todo_types.h"
 
 COLORREF TodoSticky_BarColor(TodoImportance imp, BOOL done) {

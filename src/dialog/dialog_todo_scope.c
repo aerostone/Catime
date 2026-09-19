@@ -9,6 +9,7 @@
 #include <stdio.h>
 
 #include "todo/todo_store.h"
+#include "dialog/dialog_todo_parts.h"
 
 void TodoDlg_ApplyScopeRange(TodoFilter *f) {
     if (!f || f->dueScope == TODO_DUE_SCOPE_CUSTOM) return;

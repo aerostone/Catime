@@ -13,17 +13,16 @@
 #include "dialog/dialog_registry.h"
 #include "language.h"
 #include "todo/todo_store.h"
+#include "todo/todo_sync_internal.h"
 #include "todo/todo_sync.h"
 #include "todo/todo_rowmark.h"
 #include "todo/todo_conflict.h"
 
 #include "dialog/dialog_todo_list_state.h"
-
-extern TodoDlgState *TodoDlg_State(void);
-extern void TodoDlg_ReadFilter(HWND hdlg, TodoFilter *f);
+#include "dialog/dialog_todo_parts.h"
 
 static char *PreselectBuf(void) {
-    extern char *TodoDlg_PreselectBuf(void);
+
     return TodoDlg_PreselectBuf();
 }
 
@@ -31,7 +30,7 @@ void TodoDlg_RefreshInto(HWND hdlg) {
     TodoDlgState *ps = TodoDlg_State();
 #define s_state (*ps)
     char *s_preselect = PreselectBuf();
-    ReadFilterFromUI(hdlg, &s_state.filter);
+    TodoDlg_ReadFilter(hdlg, &s_state.filter);
     s_state.rowCount = TodoStore_Query(&s_state.filter, s_state.rows,
                                       TODO_DLG_MAX_ROWS);
     HWND list = GetDlgItem(hdlg, IDC_TODO_LIST_VIEW);

@@ -15,10 +15,11 @@
 #include "todo/todo_sync.h"
 
 #include "dialog/dialog_todo_list_state.h"
+#include "todo/todo_conflict.h"
 
 TodoDlgState *TodoDlg_State(void);
 void TodoDlg_RefreshList(HWND hdlg);
-void TodoDlg_ReadFilter(HWND hdlg, TodoFilter *f);
+
 
 static TodoTask *SelectedTask(void) {
     TodoDlgState *s = TodoDlg_State();
@@ -121,7 +122,6 @@ void TodoDlg_OnSelect(HWND hdlg, int listIndex) {
         wchar_t wb[256];
         SendMessageW(list, LB_GETTEXT, (WPARAM)listIndex, (LPARAM)wb);
         if (wcsstr(wb, L"\u51b2\u7a81") || wcsstr(wb, L"conflict")) {
-            extern void TodoConflict_OpenDir(HWND hwnd);
             TodoConflict_OpenDir(hdlg);
         }
         s->selected = -1;

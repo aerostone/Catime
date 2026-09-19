@@ -9,6 +9,7 @@
 
 #include "../../resource/resource.h"
 #include "language.h"
+#include "dialog/dialog_todo_parts.h"
 
 #ifndef EM_SETCUEBANNER_W
 #define EM_SETCUEBANNER_W (0x1501)
