@@ -7,6 +7,8 @@
 
 #include "todo_stickies.h"
 #include "todo_store.h"
+#include "todo_sticky_pomo.h"
+#include "todo_sticky_rows.h"
 
 BOOL TodoStickyEdit_Commit(const char *oldId, const wchar_t *newTitle,
                            char *newIdOut, size_t newIdCap);
@@ -18,12 +20,20 @@ BOOL TodoStickyEdit_Commit(const char *oldId, const wchar_t *newTitle,
 #define STICKY_MENU_DONE 9101
 #define STICKY_MENU_UNPIN 9102
 #define STICKY_MENU_DELETE 9103
+#define STICKY_MENU_EXPAND 9104
+#define STICKY_MENU_TOPMOST 9105
+#define STICKY_MENU_POMO 9106
+#define STICKY_MENU_RENAME 9107
+#define STICKY_TIMER_POMO 9201
 
 void TodoSticky_LoadGeom(const char *taskId, int *x, int *y, int *w, int *h);
 void TodoSticky_SaveGeom(const char *taskId, int x, int y, int w, int h);
 COLORREF TodoSticky_BarColor(TodoImportance imp, BOOL done);
 void TodoSticky_Paint(HDC hdc, const RECT *rc, const TodoTask *t,
                       HFONT fTitle, HFONT fBody);
+void TodoSticky_PaintEx(HDC hdc, const RECT *rc, const TodoTask *t,
+                        HFONT fTitle, HFONT fBody, BOOL collapsed,
+                        int pomoRemSec);
 
 #include "todo_stickies_slot.h"
 
@@ -94,24 +104,6 @@ static void OpenEdit(StickyWin *sw) {
     TodoStickyEdit_Open(sw->hwnd, sw->taskId, &sw->edit);
 }
 
-static void TodoSticky_RunMenuCommand(HWND hwnd, const char *taskId,
-                                      BOOL done, UINT cmd) {
-    StickyWin *sw = TodoSticky_SlotByHwnd(hwnd);
-    if (!sw || !taskId) return;
-    if (cmd == STICKY_MENU_DONE) {
-        TodoStore_SetDone(taskId, !done);
-        InvalidateRect(hwnd, NULL, TRUE);
-    } else if (cmd == STICKY_MENU_UNPIN) {
-        TodoSticky_SetPinned(taskId, FALSE);
-    } else if (cmd == STICKY_MENU_DELETE) {
-        char id[TODO_STORE_ID_LEN];
-        strcpy_s(id, sizeof(id), taskId);
-        TodoStickies_Forget(id);
-        TodoStore_Remove(id);
-    }
-}
-
-
 static LRESULT CALLBACK StickyProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     StickyWin *sw = TodoSticky_SlotByHwnd(hwnd);
     switch (msg) {
@@ -122,8 +114,14 @@ static LRESULT CALLBACK StickyProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         GetClientRect(hwnd, &rc);
         if (sw) {
             TodoTask t;
-            if (LoadTask(sw->taskId, &t))
-                TodoSticky_Paint(hdc, &rc, &t, sw->fTitle, sw->fBody);
+            if (LoadTask(sw->taskId, &t)) {
+                int rem = 0;
+                const char *pid = TodoStickyPomo_TaskId();
+                if (pid[0] && strcmp(pid, sw->taskId) == 0)
+                    rem = TodoStickyPomo_Remaining();
+                TodoSticky_PaintEx(hdc, &rc, &t, sw->fTitle, sw->fBody,
+                                   sw->collapsed, rem);
+            }
         }
         EndPaint(hwnd, &ps);
         return 0;
@@ -164,26 +162,18 @@ static LRESULT CALLBACK StickyProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             ReleaseCapture();
         }
         return 0;
-    case WM_LBUTTONDBLCLK:
-        if (sw) OpenEdit(sw);
+    case WM_LBUTTONDBLCLK: {
+        if (!sw) break;
+        int y = GET_Y_LPARAM(lp);
+        if (y <= STICKY_BAR_H)
+            TodoSticky_SetCollapsedUI(hwnd, sw, !sw->collapsed);
+        else if (!sw->collapsed)
+            OpenEdit(sw);
         return 0;
+    }
     case WM_RBUTTONUP: {
         if (!sw) break;
-        HMENU m = CreatePopupMenu();
-        if (m) {
-            TodoTask t;
-            BOOL done = FALSE;
-            if (LoadTask(sw->taskId, &t)) done = t.done;
-            AppendMenuW(m, MF_STRING, STICKY_MENU_DONE,
-                        done ? L"标为未完成" : L"标为完成");
-            AppendMenuW(m, MF_STRING, STICKY_MENU_UNPIN, L"取消置顶");
-            AppendMenuW(m, MF_STRING, STICKY_MENU_DELETE, L"删除任务");
-            POINT pt;
-            GetCursorPos(&pt);
-            UINT cmd = TrackPopupMenu(m, TPM_RETURNCMD, pt.x, pt.y, 0, hwnd, NULL);
-            DestroyMenu(m);
-            TodoSticky_RunMenuCommand(hwnd, sw->taskId, done, cmd);
-        }
+        TodoSticky_ShowRowMenu(hwnd, sw);
         return 0;
     }
     case WM_COMMAND:
@@ -202,6 +192,15 @@ static LRESULT CALLBACK StickyProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             GetWindowRect(hwnd, &wr);
             TodoSticky_SaveGeom(sw->taskId, wr.left, wr.top,
                                 wr.right - wr.left, wr.bottom - wr.top);
+        }
+        return 0;
+    case WM_TIMER:
+        if (sw && wp == STICKY_TIMER_POMO) {
+            if (!TodoStickyPomo_Validate() ||
+                TodoStickyPomo_Remaining() <= 0) {
+                KillTimer(hwnd, STICKY_TIMER_POMO);
+            }
+            InvalidateRect(hwnd, NULL, FALSE);
         }
         return 0;
     case WM_DESTROY:
@@ -263,10 +262,17 @@ void TodoStickies_Show(const char *taskId) {
                             DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
                             CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
                             DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
-    sw->hwnd = CreateWindowExW(WS_EX_TOPMOST | WS_EX_TOOLWINDOW, STICKY_CLASS,
+    DWORD ex = WS_EX_TOOLWINDOW | (TodoSticky_TopmostFor(taskId) ? WS_EX_TOPMOST : 0);
+    sw->collapsed = TodoSticky_IsCollapsed(taskId);
+    sw->topmostOverride = TodoSticky_TopmostOverride(taskId);
+    int fullH = h;
+    sw->expandH = h;
+    if (sw->collapsed) h = STICKY_BAR_H + 2;
+    sw->hwnd = CreateWindowExW(ex, STICKY_CLASS,
                                L"Catime 便签", WS_POPUP | WS_VISIBLE | WS_THICKFRAME,
                                x, y, w, h, NULL, NULL,
                                GetModuleHandleW(NULL), NULL);
+    (void)fullH;
     if (!sw->hwnd) {
         if (sw->fTitle) DeleteObject(sw->fTitle);
         if (sw->fBody) DeleteObject(sw->fBody);
@@ -275,4 +281,3 @@ void TodoStickies_Show(const char *taskId) {
     }
     ShowWindow(sw->hwnd, SW_SHOW);
 }
-

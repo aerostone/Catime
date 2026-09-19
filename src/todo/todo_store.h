@@ -52,9 +52,21 @@ BOOL TodoStore_FindById(const char *id, TodoTask *out);
 BOOL TodoStore_UpdateFromSync(const char *id, const char *title,
                               const char *dueDate, TodoImportance imp,
                               BOOL done);
+BOOL TodoStore_UpdateFromSyncStamp(const char *id, const char *title,
+                                   const char *dueDate, TodoImportance imp,
+                                   BOOL done, long long srvStamp,
+                                   const char *srvId);
 BOOL TodoStore_InsertSynced(const char *id, const char *title,
                             const char *dueDate, TodoImportance imp,
                             BOOL done);
+BOOL TodoStore_InsertSyncedStamp(const char *id, const char *title,
+                                 const char *dueDate, TodoImportance imp,
+                                 BOOL done, long long srvStamp,
+                                 const char *srvId);
+void TodoStore_RecordDeleted(const char *id);
+int TodoStore_DeletedIds(char out[][TODO_STORE_ID_LEN], int cap);
+void TodoStore_ClearDeleted(void);
+void TodoStore_StripDeleted(const char *id);
 
 /* Snapshot local tasks (for merged query). Returns items written. */
 int TodoStore_SnapshotLocal(TodoTask *out, int outCap);

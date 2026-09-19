@@ -21,7 +21,8 @@ extern "C" {
 
 /* One merged server task (subset of tweek Task wire model). */
 typedef struct {
-    char clientId[TODO_STORE_ID_LEN]; /* external_id on server */
+    char clientId[TODO_STORE_ID_LEN]; /* external_id on server (may be "") */
+    char serverId[TODO_STORE_UUID_LEN]; /* tweek tasks.id (always present) */
     char title[TODO_STORE_TITLE_LEN];
     char date[TODO_STORE_DATE_LEN];     /* calendar day */
     char dueDate[TODO_STORE_DATE_LEN];  /* from due_at */
@@ -36,10 +37,14 @@ typedef struct {
 int TaskSync_ParsePull(const char *json, TaskSyncItem *out, int cap,
                        long long *serverTimeOut);
 
-/* Build push request body from local tasks + deleted ids. dst JSON cap. */
+/* Build push request body from local tasks + deleted ids. dst JSON cap.
+ * Emits client_id + server_id + title + date + due_date + priority +
+ * status + updated_at per task. */
 void TaskSync_BuildPush(const TodoTask *tasks, int count,
                         const char deleted[][TODO_STORE_ID_LEN], int delCount,
                         char *dst, size_t cap);
+/* Parse push response created[] mappings (client_id -> server_id). */
+int TaskSync_ParseCreated(const char *json, TaskSyncItem *out, int cap);
 
 /* Parse push response: applied/deleted counts + conflicts[] items. */
 int TaskSync_ParsePushResp(const char *json, TaskSyncItem *conflicts, int cap);

@@ -76,3 +76,65 @@ void TodoSticky_SaveGeom(const char *taskId, int x, int y, int w, int h) {
     _snprintf_s(v, sizeof(v), _TRUNCATE, "%d", h);
     WritePrivateProfileStringA(sec, "H", v, ini);
 }
+
+/* Collapsed + per-card topmost override persist in same section. */
+BOOL TodoSticky_IsCollapsed(const char *taskId) {
+    const char *ini = TodoStore_IniPath();
+    if (!taskId || !taskId[0] || !ini || !ini[0]) return FALSE;
+    char sec[96];
+    SecFor(taskId, sec, sizeof(sec));
+    return GetPrivateProfileIntA(sec, "Collapsed", 0, ini) != 0;
+}
+
+void TodoSticky_SetCollapsed(const char *taskId, BOOL collapsed) {
+    const char *ini = TodoStore_IniPath();
+    if (!taskId || !taskId[0] || !ini || !ini[0]) return;
+    char sec[96];
+    SecFor(taskId, sec, sizeof(sec));
+    WritePrivateProfileStringA(sec, "Collapsed", collapsed ? "1" : "0", ini);
+}
+
+/* Global sticky topmost default ([Sticky] Topmost=1 default). */
+BOOL TodoSticky_TopmostGlobal(void) {
+    const char *ini = TodoStore_IniPath();
+    if (!ini || !ini[0]) return TRUE;
+    return GetPrivateProfileIntA("Sticky", "Topmost", 1, ini) != 0;
+}
+
+void TodoSticky_SetTopmostGlobal(BOOL topmost) {
+    const char *ini = TodoStore_IniPath();
+    if (!ini || !ini[0]) return;
+    WritePrivateProfileStringA("Sticky", "Topmost", topmost ? "1" : "0",
+                               ini);
+}
+
+/* Per-card override: -1 inherit, 0 normal, 1 topmost. */
+int TodoSticky_TopmostOverride(const char *taskId) {
+    const char *ini = TodoStore_IniPath();
+    if (!taskId || !taskId[0] || !ini || !ini[0]) return -1;
+    char sec[96];
+    SecFor(taskId, sec, sizeof(sec));
+    char v[8] = "";
+    GetPrivateProfileStringA(sec, "Topmost", "", v, sizeof(v), ini);
+    if (strcmp(v, "0") == 0) return 0;
+    if (strcmp(v, "1") == 0) return 1;
+    return -1;
+}
+
+void TodoSticky_SetTopmostOverride(const char *taskId, int mode) {
+    const char *ini = TodoStore_IniPath();
+    if (!taskId || !taskId[0] || !ini || !ini[0]) return;
+    char sec[96];
+    SecFor(taskId, sec, sizeof(sec));
+    if (mode < 0)
+        WritePrivateProfileStringA(sec, "Topmost", NULL, ini);
+    else
+        WritePrivateProfileStringA(sec, "Topmost", mode ? "1" : "0", ini);
+}
+
+/* Effective topmost for a card. */
+BOOL TodoSticky_TopmostFor(const char *taskId) {
+    int ov = TodoSticky_TopmostOverride(taskId);
+    if (ov >= 0) return ov != 0;
+    return TodoSticky_TopmostGlobal();
+}

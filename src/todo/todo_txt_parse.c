@@ -119,6 +119,12 @@ BOOL TodoTxt_ParseLine(const char *line, TodoTask *out, const char *defDate) {
             } else if (_strnicmp(word, "pin:", 4) == 0) {
                 consumed = TRUE;
                 if (word[4] == '1') out->pinned = TRUE;
+            } else if (_strnicmp(word, "upd:", 4) == 0 && word[4]) {
+                consumed = TRUE;
+                out->updatedAt = _strtoi64(word + 4, NULL, 10);
+            } else if (_strnicmp(word, "srv:", 4) == 0 && word[4]) {
+                consumed = TRUE;
+                strcpy_s(out->serverId, sizeof(out->serverId), word + 4);
             }
         }
         if (!consumed) {

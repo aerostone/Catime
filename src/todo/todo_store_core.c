@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "todo_normalize.h"
 #include "todo_store.h"
@@ -148,6 +149,10 @@ void TodoStore_Shutdown(void) {
     /* lock intentionally kept (process-lifetime); nothing to free */
 }
 
+static long long StampNow(void) {
+    return (long long)time(NULL);
+}
+
 BOOL TodoStore_Add(const char *title, TodoImportance imp, const char *dueDate) {
     if (!title || !title[0]) return FALSE;
     char clean[TODO_STORE_TITLE_LEN];
@@ -167,6 +172,7 @@ BOOL TodoStore_Add(const char *title, TodoImportance imp, const char *dueDate) {
         t.done = FALSE;
         if (dueDate) strcpy_s(t.dueDate, sizeof(t.dueDate), dueDate);
         TodayStr(t.createdAt, sizeof(t.createdAt));
+        t.updatedAt = StampNow();
         s_tasks[s_count++] = t;
         if (s_txtPath[0]) SaveLocked();
         ok = TRUE;
@@ -184,6 +190,7 @@ BOOL TodoStore_SetDone(const char *id, BOOL done) {
         s_tasks[i].done = done;
         if (done) TodayStr(s_tasks[i].doneAt, sizeof(s_tasks[i].doneAt));
         else s_tasks[i].doneAt[0] = '\0';
+        s_tasks[i].updatedAt = StampNow();
         if (s_txtPath[0]) SaveLocked();
         ok = TRUE;
     }
@@ -192,12 +199,15 @@ BOOL TodoStore_SetDone(const char *id, BOOL done) {
     return ok;
 }
 
+void TodoStore_RecordDeleted(const char *id);
+
 BOOL TodoStore_Remove(const char *id) {
     if (!id || !id[0]) return FALSE;
     TodoStore_Lock();
     int i = TodoStore_FindIndex(id);
     BOOL ok = FALSE;
     if (i >= 0) {
+        TodoStore_RecordDeleted(s_tasks[i].id);
         for (int k = i; k + 1 < s_count; k++) s_tasks[k] = s_tasks[k + 1];
         s_count--;
         if (s_txtPath[0]) SaveLocked();
@@ -215,6 +225,7 @@ BOOL TodoStore_SetImportance(const char *id, TodoImportance imp) {
     BOOL ok = FALSE;
     if (i >= 0) {
         s_tasks[i].importance = imp;
+        s_tasks[i].updatedAt = StampNow();
         if (s_txtPath[0]) SaveLocked();
         ok = TRUE;
     }
@@ -231,20 +242,7 @@ BOOL TodoStore_SetDueDate(const char *id, const char *dueDate) {
     if (i >= 0) {
         if (dueDate) strcpy_s(s_tasks[i].dueDate, sizeof(s_tasks[i].dueDate), dueDate);
         else s_tasks[i].dueDate[0] = '\0';
-        if (s_txtPath[0]) SaveLocked();
-        ok = TRUE;
-    }
-    TodoStore_Unlock();
-    return ok;
-}
-
-BOOL TodoStore_SetPinned(const char *id, BOOL pinned) {
-    if (!id || !id[0]) return FALSE;
-    TodoStore_Lock();
-    int i = TodoStore_FindIndex(id);
-    BOOL ok = FALSE;
-    if (i >= 0) {
-        s_tasks[i].pinned = pinned ? TRUE : FALSE;
+        s_tasks[i].updatedAt = StampNow();
         if (s_txtPath[0]) SaveLocked();
         ok = TRUE;
     }

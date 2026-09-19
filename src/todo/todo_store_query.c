@@ -25,7 +25,9 @@ static int AppendSync(TodoTask *out, int cap) {
         TodoTask t;
         memset(&t, 0, sizeof(t));
         t.source = TODO_SOURCE_SYNC;
-        _snprintf_s(t.id, sizeof(t.id), _TRUNCATE, "S%d", i);
+        /* view-only: actionable sync rows live in local store (C:/L: ids
+         * via merge). V: rows are display-only, never pushed. */
+        _snprintf_s(t.id, sizeof(t.id), _TRUNCATE, "V:%d", i);
         /* lines look like " [ ] title" / " ! title": strip marker */
         const char *p = lines[i];
         while (*p == ' ') p++;

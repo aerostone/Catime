@@ -130,9 +130,19 @@ BOOL TimerEvents_HandlePomodoroCompletion(HWND hwnd) {
 
     ShowNotification(hwnd, completionMsg);
     PlayNotificationSound(hwnd);
-    /* Tweek sync: report completed WORK minutes (index 0 of each cycle). */
+    /* Tweek sync: report completed WORK minutes (index 0 of each cycle).
+     * Sticky-bound pomo reports its task id; otherwise NULL. */
     if (completedIndex == 0 && pomodoro_initial_times[0] >= 60) {
-        TodoSync_OnPomodoroComplete(NULL, pomodoro_initial_times[0] / 60);
+        const char *pomoTask = NULL;
+        const char *TodoStickyPomo_TaskId(void);
+        BOOL TodoStickyPomo_Active(void);
+        void TodoStickyPomo_Clear(void);
+        if (TodoStickyPomo_Active()) {
+            pomoTask = TodoStickyPomo_TaskId();
+            if (!pomoTask[0]) pomoTask = NULL;
+        }
+        TodoSync_OnPomodoroComplete(pomoTask, pomodoro_initial_times[0] / 60);
+        TodoStickyPomo_Clear();
     }
 
     /* Preserve the absolute deadline so notification work introduces no drift. */

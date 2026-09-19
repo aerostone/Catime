@@ -27,6 +27,12 @@ COLORREF TodoSticky_BodyColor(void) {
 
 void TodoSticky_Paint(HDC hdc, const RECT *rc, const TodoTask *t,
                       HFONT fTitle, HFONT fBody) {
+    TodoSticky_PaintEx(hdc, rc, t, fTitle, fBody, FALSE, 0);
+}
+
+void TodoSticky_PaintEx(HDC hdc, const RECT *rc, const TodoTask *t,
+                        HFONT fTitle, HFONT fBody, BOOL collapsed,
+                        int pomoRemSec) {
     if (!hdc || !rc || !t) return;
     int barH = 26;
     HBRUSH body = CreateSolidBrush(TodoSticky_BodyColor());
@@ -51,12 +57,26 @@ void TodoSticky_Paint(HDC hdc, const RECT *rc, const TodoTask *t,
         DrawTextW(hdc, wt, -1, &tr,
                   DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS | DT_NOPREFIX);
     }
-    /* close "x" hint */
+    /* collapse glyph + close "x" hint */
     if (fBody) SelectObject(hdc, fBody);
     SetTextColor(hdc, RGB(90, 90, 90));
     RECT xr = bar;
-    xr.left = xr.right - 26;
-    DrawTextW(hdc, L"x", -1, &xr, DT_CENTER | DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
+    xr.left = xr.right - 44;
+    xr.right -= 26;
+    DrawTextW(hdc, collapsed ? L"[+]" : L"[-]", -1, &xr,
+              DT_CENTER | DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
+    RECT cr = bar;
+    cr.left = cr.right - 26;
+    DrawTextW(hdc, L"x", -1, &cr, DT_CENTER | DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
+    if (pomoRemSec > 0) {
+        wchar_t pomo[32];
+        _snwprintf_s(pomo, _countof(pomo), _TRUNCATE, L"\u5515 %d:%02d ",
+                     pomoRemSec / 60, pomoRemSec % 60);
+        RECT pr = bar;
+        pr.left += 8;
+        DrawTextW(hdc, pomo, -1, &pr,
+                  DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
+    }
     /* body: due date line + done state */
     RECT br = *rc;
     br.top += barH + 6; br.left += 8; br.right -= 8; br.bottom -= 6;

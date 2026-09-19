@@ -7,6 +7,7 @@
  * todo_sync_http.c (shared state via todo_sync_internal.h).
  */
 #include "todo_sync_internal.h"
+#include "todo_types.h"
 #include "config/config_ini_api.h"
 
 CRITICAL_SECTION g_todoSyncLock;
@@ -195,14 +196,26 @@ BOOL TodoSync_ApplySettings(BOOL enabled, const char *serverUrl,
 BOOL TodoSync_OnPomodoroComplete(const char *taskId, int minutes) {
     char server[TODO_URL_LEN], token[TODO_TOKEN_LEN];
     char tid[TODO_ID_LEN] = "";
+    /* local stable id -> server uuid via store serverId; C:uuid strips prefix */
+    if (taskId && *taskId) {
+        if (taskId[0] == 'C' && taskId[1] == ':') {
+            strcpy_s(tid, sizeof(tid), taskId + 2);
+        } else {
+            TodoTask lt;
+            memset(&lt, 0, sizeof(lt));
+            extern BOOL TodoStore_FindById(const char *id, TodoTask *out);
+            if (TodoStore_FindById(taskId, &lt) && lt.serverId[0])
+                strcpy_s(tid, sizeof(tid), lt.serverId);
+            else
+                strcpy_s(tid, sizeof(tid), taskId);
+        }
+    }
     EnterCriticalSection(&g_todoSyncLock);
     strcpy_s(server, sizeof(server), g_todoSyncServer);
     strcpy_s(token, sizeof(token), g_todoSyncToken);
     BOOL en = g_todoSyncEnabled;
-    if ((!taskId || !*taskId) && g_todoSyncCache.todayCount > 0)
+    if (!tid[0] && g_todoSyncCache.todayCount > 0)
         strcpy_s(tid, sizeof(tid), g_todoSyncCache.today[0].id);
-    else if (taskId)
-        strcpy_s(tid, sizeof(tid), taskId);
     LeaveCriticalSection(&g_todoSyncLock);
     if (!en || !server[0] || !token[0]) return FALSE;
     char url[TODO_URL_LEN + 32], body[256];

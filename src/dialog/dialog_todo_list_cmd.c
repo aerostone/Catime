@@ -53,10 +53,11 @@ void TodoDlg_OnAdd(HWND hdlg) {
 void TodoDlg_OnToggleDone(HWND hdlg) {
     TodoTask *t = SelectedTask();
     if (!t) return;
-    if (t->source == TODO_SOURCE_LOCAL) {
+    if (t->source == TODO_SOURCE_LOCAL ||
+        (t->id[0] == 'C' && t->id[1] == ':')) {
         TodoStore_SetDone(t->id, !t->done);
     } else {
-        TodoSync_MarkDone(t->id);
+        /* V: view-only: nothing actionable */
     }
     TodoDlg_RefreshList(hdlg);
 }
@@ -64,14 +65,15 @@ void TodoDlg_OnToggleDone(HWND hdlg) {
 void TodoDlg_OnDelete(HWND hdlg) {
     TodoTask *t = SelectedTask();
     if (!t) return;
-    if (t->source == TODO_SOURCE_LOCAL) {
+    if (t->source == TODO_SOURCE_LOCAL ||
+        (t->id[0] == 'C' && t->id[1] == ':')) {
         char id[TODO_STORE_ID_LEN];
         strcpy_s(id, sizeof(id), t->id);
         TodoStickies_Forget(id);
         TodoStore_Remove(id);
         TodoDlg_RefreshList(hdlg);
     } else {
-        MessageBoxW(hdlg, L"同步任务请在服务端删除", L"TODO", MB_ICONINFORMATION);
+        MessageBoxW(hdlg, L"该行为只读视图，无可操作任务", L"TODO", MB_ICONINFORMATION);
     }
 }
 

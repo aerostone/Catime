@@ -20,6 +20,8 @@ extern "C" {
 #define TODO_STORE_TITLE_LEN 128
 #define TODO_STORE_ID_LEN 64
 #define TODO_STORE_DATE_LEN 16 /* YYYY-MM-DD, empty = no date */
+#define TODO_STORE_NOTES_LEN 512
+#define TODO_STORE_UUID_LEN 64
 
 /* Importance: 0 none, 1 low, 2 medium, 3 high. */
 typedef enum {
@@ -46,6 +48,9 @@ typedef struct {
     char doneAt[TODO_STORE_DATE_LEN];   /* completion date or "" */
     char createdAt[TODO_STORE_DATE_LEN];/* creation date or "" */
     BOOL pinned;                    /* sticky pinned (pin:1 in txt) */
+    long long updatedAt;            /* local mutation stamp (unix sec) */
+    char notes[TODO_STORE_NOTES_LEN]; /* reserved: pomo binding note */
+    char serverId[TODO_STORE_UUID_LEN]; /* tweek uuid (srv:xxx in txt) */
 } TodoTask;
 
 /* Due date scope preset for the list dialog. */

@@ -66,11 +66,10 @@ static int NextObject(const char **cursor, char *slice, size_t cap) {
 
 static void FillItem(const char *slice, TaskSyncItem *t) {
     memset(t, 0, sizeof(*t));
-    TodoSyncJson_ExtractStr(slice, "id", t->clientId, sizeof(t->clientId));
-    /* push conflicts use client_id; pull rows use server id */
-    if (!t->clientId[0])
-        TodoSyncJson_ExtractStr(slice, "client_id", t->clientId,
-                                sizeof(t->clientId));
+    /* server uuid always in "id"; Catime stable id in "client_id" */
+    TodoSyncJson_ExtractStr(slice, "id", t->serverId, sizeof(t->serverId));
+    TodoSyncJson_ExtractStr(slice, "client_id", t->clientId,
+                            sizeof(t->clientId));
     TodoSyncJson_ExtractStr(slice, "title", t->title, sizeof(t->title));
     TodoSyncJson_ExtractStr(slice, "date", t->date, sizeof(t->date));
     TodoSyncJson_ExtractStr(slice, "due_date", t->dueDate, sizeof(t->dueDate));
@@ -103,7 +102,7 @@ int TaskSync_ParsePull(const char *json, TaskSyncItem *out, int cap,
     char slice[1024];
     while (n < cap && NextObject(&cur, slice, sizeof(slice))) {
         FillItem(slice, &out[n]);
-        if (out[n].clientId[0]) n++;
+        if (out[n].serverId[0]) n++;
     }
     return n;
 }
@@ -121,13 +120,16 @@ void TaskSync_BuildPush(const TodoTask *tasks, int count,
         JsonEscape(t->title, et, sizeof(et));
         JsonEscape(t->createdAt, ed, sizeof(ed));
         JsonEscape(t->dueDate, edue, sizeof(edue));
+        char esrv[TODO_STORE_UUID_LEN + 8];
+        JsonEscape(t->serverId, esrv, sizeof(esrv));
         w += _snprintf_s(dst + w, cap - w, _TRUNCATE,
-                         "%s{\"client_id\":\"%s\",\"title\":\"%s\","
+                         "%s{\"client_id\":\"%s\",\"server_id\":\"%s\","
+                         "\"title\":\"%s\","
                          "\"date\":\"%s\",\"due_date\":\"%s\","
                          "\"priority\":%d,\"status\":\"%s\",\"updated_at\":%lld}",
-                         i ? "," : "", t->id, et, ed, edue,
+                         i ? "," : "", t->id, esrv, et, ed, edue,
                          (int)t->importance, t->done ? "done" : "open",
-                         (long long)0);
+                         t->updatedAt);
         if (w + 1 >= cap) break;
     }
     w += _snprintf_s(dst + w, cap - w, _TRUNCATE, "],\"deleted\":[");
@@ -147,7 +149,24 @@ int TaskSync_ParsePushResp(const char *json, TaskSyncItem *conflicts, int cap) {
     char slice[1024];
     while (n < cap && NextObject(&cur, slice, sizeof(slice))) {
         FillItem(slice, &conflicts[n]);
-        if (conflicts[n].clientId[0]) n++;
+        if (conflicts[n].serverId[0] || conflicts[n].clientId[0]) n++;
+    }
+    return n;
+}
+
+int TaskSync_ParseCreated(const char *json, TaskSyncItem *out, int cap) {
+    if (!json || !out || cap <= 0) return 0;
+    const char *cur = NULL;
+    if (!FindArrayObjects(json, "created", &cur)) return 0;
+    int n = 0;
+    char slice[512];
+    while (n < cap && NextObject(&cur, slice, sizeof(slice))) {
+        memset(&out[n], 0, sizeof(out[n]));
+        TodoSyncJson_ExtractStr(slice, "client_id", out[n].clientId,
+                                sizeof(out[n].clientId));
+        TodoSyncJson_ExtractStr(slice, "server_id", out[n].serverId,
+                                sizeof(out[n].serverId));
+        if (out[n].clientId[0] && out[n].serverId[0]) n++;
     }
     return n;
 }

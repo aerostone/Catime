@@ -88,8 +88,11 @@ BOOL HandleTodoMenuRow(HWND hwnd, UINT cmd, int index) {
     if (index < 0 || index >= n) return TRUE;
     if (tasks[index].source == TODO_SOURCE_LOCAL) {
         TodoStore_SetDone(tasks[index].id, TRUE);
+    } else if (tasks[index].id[0] == 'C' && tasks[index].id[1] == ':') {
+        /* merged sync row (id-keyed): toggle local copy by stable id */
+        TodoStore_SetDone(tasks[index].id, TRUE);
     } else {
-        TodoSync_MarkDone(tasks[index].id);
+        /* V: view-only row: no stable id, nothing actionable */
     }
     return TRUE;
 }

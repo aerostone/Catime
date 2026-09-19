@@ -100,21 +100,53 @@ static void AppendConflict(const TaskSyncItem *srv) {
     fclose(fp);
 }
 
-/* Apply one pulled server row to the local store. */
+/* Local id for a pulled row: client_id when known, else C:<uuid>. */
+static void PulledLocalId(const TaskSyncItem *srv, char *out, size_t cap) {
+    if (srv->clientId[0]) {
+        strcpy_s(out, cap, srv->clientId);
+    } else {
+        _snprintf_s(out, cap, _TRUNCATE, "C:%s", srv->serverId);
+    }
+}
+
+/* Apply one pulled server row to the local store (id-keyed, never row pos).
+ * - tombstone: delete local row by id (RecordDeleted suppressed: row came
+ *   from server, re-push of its id is skipped via serverId match below).
+ * - existing: server-newer (updated_at) wins; loser snapshotted to conflict.
+ * - missing: insert with server stamp + serverId (no ping-pong). */
 static void ApplyPulled(const TaskSyncItem *srv) {
+    char lid[TODO_STORE_ID_LEN] = "";
+    PulledLocalId(srv, lid, sizeof(lid));
+    if (!lid[0]) return;
+    const char *due = srv->dueDate[0] ? srv->dueDate : srv->date;
+    if (srv->deleted) {
+        TodoTask cur;
+        memset(&cur, 0, sizeof(cur));
+        if (TodoStore_FindById(lid, &cur)) {
+            /* server tombstone wins unconditionally: drop local row.
+             * ClearDeleted-sidecar note: Remove() would record the id;
+             * strip it right after so we never push back a server delete. */
+            TodoStore_Remove(lid);
+            TodoStore_StripDeleted(lid);
+        }
+        return;
+    }
+    if (!srv->title[0]) return;
     TodoTask cur;
     memset(&cur, 0, sizeof(cur));
-    if (TodoStore_FindById(srv->clientId, &cur)) {
-        /* local exists: server-newer check needs local stamp; store keeps
-         * no per-row stamp, so pull wins only when content differs AND the
-         * row was NOT locally modified since last push (dirty set lives in
-         * the push driver below). Here: overwrite + snapshot loser. */
+    if (TodoStore_FindById(lid, &cur)) {
+        if (srv->updatedAt <= cur.updatedAt) return; /* local newer: keep */
         BOOL same = strcmp(cur.title, srv->title) == 0 &&
                     cur.done == srv->done &&
-                    strcmp(cur.dueDate, srv->dueDate[0] ? srv->dueDate : srv->date) == 0 &&
+                    strcmp(cur.dueDate, due) == 0 &&
                     (int)cur.importance == (int)srv->importance;
-        if (same) return;
-        /* loser snapshot: keep local line in conflict file first */
+        if (same) {
+            /* content same, adopt stamp+serverId only */
+            TodoStore_UpdateFromSyncStamp(lid, NULL, NULL, cur.importance,
+                                          cur.done, srv->updatedAt,
+                                          srv->serverId);
+            return;
+        }
         TaskSyncItem loser;
         memset(&loser, 0, sizeof(loser));
         strcpy_s(loser.clientId, sizeof(loser.clientId), cur.id);
@@ -123,14 +155,12 @@ static void ApplyPulled(const TaskSyncItem *srv) {
         loser.importance = cur.importance;
         loser.done = cur.done;
         AppendConflict(&loser);
-        TodoStore_UpdateFromSync(srv->clientId, srv->title,
-                                 srv->dueDate[0] ? srv->dueDate : srv->date,
-                                 srv->importance, srv->done);
-        if (srv->deleted) TodoStore_Remove(srv->clientId);
-    } else if (!srv->deleted && srv->title[0]) {
-        TodoStore_InsertSynced(srv->clientId, srv->title,
-                               srv->dueDate[0] ? srv->dueDate : srv->date,
-                               srv->importance, srv->done);
+        TodoStore_UpdateFromSyncStamp(lid, srv->title, due, srv->importance,
+                                      srv->done, srv->updatedAt,
+                                      srv->serverId);
+    } else {
+        TodoStore_InsertSyncedStamp(lid, srv->title, due, srv->importance,
+                                    srv->done, srv->updatedAt, srv->serverId);
     }
 }
 
@@ -163,8 +193,10 @@ void TodoSyncMerge_Run(const char *server, const char *token) {
     if (mt == s_lastPushMtime) return;
     TodoTask tasks[TODO_STORE_MAX_TASKS];
     int n = TodoStore_SnapshotLocal(tasks, TODO_STORE_MAX_TASKS);
+    char deleted[64][TODO_STORE_ID_LEN];
+    int dn = TodoStore_DeletedIds(deleted, 64);
     char body[TODO_RESP_MAX];
-    TaskSync_BuildPush(tasks, n, NULL, 0, body, sizeof(body));
+    TaskSync_BuildPush(tasks, n, dn ? deleted : NULL, dn, body, sizeof(body));
     char purl[TODO_URL_LEN + 32];
     _snprintf_s(purl, sizeof(purl), _TRUNCATE, "%s/api/catime/push", server);
     char *presp = TodoSyncHttp_PostResp(purl, token, body);
@@ -173,9 +205,11 @@ void TodoSyncMerge_Run(const char *server, const char *token) {
         int cn = TaskSync_ParsePushResp(presp, conf, 64);
         for (int i = 0; i < cn; i++) {
             /* server won: snapshot local loser, then take server row */
+            char lid[TODO_STORE_ID_LEN] = "";
+            PulledLocalId(&conf[i], lid, sizeof(lid));
             TodoTask cur;
             memset(&cur, 0, sizeof(cur));
-            if (TodoStore_FindById(conf[i].clientId, &cur)) {
+            if (lid[0] && TodoStore_FindById(lid, &cur)) {
                 TaskSyncItem loser;
                 memset(&loser, 0, sizeof(loser));
                 strcpy_s(loser.clientId, sizeof(loser.clientId), cur.id);
@@ -187,7 +221,21 @@ void TodoSyncMerge_Run(const char *server, const char *token) {
             }
             ApplyPulled(&conf[i]);
         }
+        /* created[] mappings: adopt serverId locally (closes the loop) */
+        TaskSyncItem mk[64];
+        int mn = TaskSync_ParseCreated(presp, mk, 64);
+        for (int i = 0; i < mn; i++) {
+            TodoTask cur;
+            memset(&cur, 0, sizeof(cur));
+            if (TodoStore_FindById(mk[i].clientId, &cur) &&
+                !cur.serverId[0]) {
+                TodoStore_UpdateFromSyncStamp(mk[i].clientId, NULL, NULL,
+                                              cur.importance, cur.done, 0,
+                                              mk[i].serverId);
+            }
+        }
         free(presp);
+        if (dn > 0) TodoStore_ClearDeleted();
         FileMtime(txt, &s_lastPushMtime);
     }
 }

@@ -21,30 +21,34 @@ void TodoTxt_FormatLine(const TodoTask *t, char *dst, size_t cap) {
     if (t->importance == TODO_IMPORTANCE_HIGH) prio = "(A) ";
     else if (t->importance == TODO_IMPORTANCE_MEDIUM) prio = "(B) ";
     else if (t->importance == TODO_IMPORTANCE_LOW) prio = "(C) ";
+    /* tail extensions (spec order: due id pin upd srv) */
+    char tail[192] = "";
+    _snprintf_s(tail, sizeof(tail), _TRUNCATE, "%s%s%s%s%s%s",
+                t->dueDate[0] ? " due:" : "", t->dueDate,
+                t->id[0] ? " id:" : "", t->id,
+                t->pinned ? " pin:1" : "",
+                t->updatedAt > 0 ? " upd:" : "");
+    if (t->updatedAt > 0) {
+        char us[32];
+        _snprintf_s(us, sizeof(us), _TRUNCATE, "%lld", t->updatedAt);
+        strcat_s(tail, sizeof(tail), us);
+    }
+    if (t->serverId[0]) {
+        strcat_s(tail, sizeof(tail), " srv:");
+        strcat_s(tail, sizeof(tail), t->serverId);
+    }
     if (t->done) {
         if (t->doneAt[0])
-            _snprintf_s(dst, cap, _TRUNCATE, "x %s %s%s%s%s%s%s%s", t->doneAt,
-                        prio, title,
-                        t->dueDate[0] ? " due:" : "", t->dueDate,
-                        t->id[0] ? " id:" : "", t->id,
-                        t->pinned ? " pin:1" : "");
+            _snprintf_s(dst, cap, _TRUNCATE, "x %s %s%s%s", t->doneAt,
+                        prio, title, tail);
         else
-            _snprintf_s(dst, cap, _TRUNCATE, "x %s%s%s%s%s%s%s", prio, title,
-                        t->dueDate[0] ? " due:" : "", t->dueDate,
-                        t->id[0] ? " id:" : "", t->id,
-                        t->pinned ? " pin:1" : "");
+            _snprintf_s(dst, cap, _TRUNCATE, "x %s%s%s", prio, title, tail);
     } else {
         if (t->createdAt[0])
-            _snprintf_s(dst, cap, _TRUNCATE, "%s%s %s%s%s%s%s%s", prio,
-                        t->createdAt, title,
-                        t->dueDate[0] ? " due:" : "", t->dueDate,
-                        t->id[0] ? " id:" : "", t->id,
-                        t->pinned ? " pin:1" : "");
+            _snprintf_s(dst, cap, _TRUNCATE, "%s%s %s%s", prio,
+                        t->createdAt, title, tail);
         else
-            _snprintf_s(dst, cap, _TRUNCATE, "%s%s%s%s%s%s%s", prio, title,
-                        t->dueDate[0] ? " due:" : "", t->dueDate,
-                        t->id[0] ? " id:" : "", t->id,
-                        t->pinned ? " pin:1" : "");
+            _snprintf_s(dst, cap, _TRUNCATE, "%s%s%s", prio, title, tail);
     }
 }
 

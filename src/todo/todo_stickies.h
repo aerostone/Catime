@@ -32,6 +32,13 @@ BOOL TodoSticky_IsPinned(const char *taskId);
 BOOL TodoSticky_SetPinned(const char *taskId, BOOL pinned);
 void TodoSticky_LoadGeom(const char *taskId, int *x, int *y, int *w, int *h);
 void TodoSticky_SaveGeom(const char *taskId, int x, int y, int w, int h);
+BOOL TodoSticky_IsCollapsed(const char *taskId);
+void TodoSticky_SetCollapsed(const char *taskId, BOOL collapsed);
+BOOL TodoSticky_TopmostGlobal(void);
+void TodoSticky_SetTopmostGlobal(BOOL topmost);
+int TodoSticky_TopmostOverride(const char *taskId);
+void TodoSticky_SetTopmostOverride(const char *taskId, int mode);
+BOOL TodoSticky_TopmostFor(const char *taskId);
 
 #ifdef __cplusplus
 }

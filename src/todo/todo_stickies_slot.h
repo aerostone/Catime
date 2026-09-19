@@ -24,6 +24,10 @@ typedef struct {
     POINT dragOff;
     HFONT fTitle;
     HFONT fBody;
+    BOOL collapsed;       /* title-bar only */
+    int expandH;          /* remembered height for expand */
+    int topmostOverride;  /* -1 inherit global, 0 normal, 1 topmost */
+    char pomoTaskId[TODO_STORE_ID_LEN]; /* bound pomo row id ("" = none) */
 } StickyWin;
 
 int TodoSticky_SlotCount(void);
@@ -31,5 +35,10 @@ StickyWin *TodoSticky_SlotAt(int index);
 StickyWin *TodoSticky_SlotById(const char *id);
 StickyWin *TodoSticky_SlotByHwnd(HWND h);
 void TodoStickies_Show(const char *taskId);
+void TodoSticky_RunMenuById(HWND hwnd, StickyWin *sw, unsigned cmd);
+void TodoSticky_ShowRowMenu(HWND hwnd, StickyWin *sw);
+void TodoSticky_SetCollapsedUI(HWND hwnd, StickyWin *sw, BOOL collapsed);
+void TodoSticky_ApplyTopmost(HWND hwnd, StickyWin *sw);
+HWND FindCatimeMainWindow(void);
 
 #endif /* CATIME_TODO_STICKIES_SLOT_H */
