@@ -840,7 +840,9 @@ jobs:
             $code = 1
             Write-Output "MINGW-BUILD-THREW: $($_.Exception.Message)"
             Write-Output "::error::MINGW threw: $($_.Exception.Message)"
-            Get-Content build-mingw.log | Select-Object -Last 80 | ForEach-Object { Write-Output "COPYABLE MINGW $_"; Write-Output "::error::MINGW $_" }
+            $errLines = Get-Content build-mingw.log | Where-Object { $_ -match 'error|Error|warning: .*todo|warning: .*dialog|undefined|FAILED|failed' } | Select-Object -Last 40
+            foreach ($line in $errLines) { Write-Output "COPYABLE MINGW-ERR $line"; Write-Output "::error::MINGW-ERR $line" }
+            Get-Content build-mingw.log | Select-Object -Last 15 | ForEach-Object { Write-Output "COPYABLE MINGW $_"; Write-Output "::error::MINGW $_" }
             exit $code
           }
           $code = $LASTEXITCODE
