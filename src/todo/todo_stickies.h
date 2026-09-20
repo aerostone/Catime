@@ -1,9 +1,10 @@
 /**
  * @file todo_stickies.h
- * @brief Stickies desktop notes: lifecycle + window management.
+ * @brief Sticky boards: one desktop card per board, always-on-top.
  *
- * Each sticky is a small topmost tool window bound to one local task.
- * Position/size persist in todo.ini [Sticky<id>] sections.
+ * A card shows a board's open tasks (see todo_board.h) with its own
+ * 本周/全部 scope toggle and keyword filter. Position/size, visibility
+ * and filter persist in todo.ini per board.
  * Pure Win32, no global hooks (CatimeInteractionSafety compliant).
  */
 #ifndef CATIME_TODO_STICKIES_H
@@ -17,44 +18,27 @@
 extern "C" {
 #endif
 
-/* Paint one sticky card (legacy wrapper: expanded, no pomo countdown). */
-void TodoSticky_Paint(HDC hdc, const RECT *rc, const TodoTask *t,
-                      HFONT fTitle, HFONT fBody);
-/* Full paint: collapsed glyph + pomo countdown row. */
-void TodoSticky_PaintEx(HDC hdc, const RECT *rc, const TodoTask *t,
-                        HFONT fTitle, HFONT fBody, BOOL collapsed,
-                        int pomoRemSec);
-
-/* Show (or create window for) one sticky by local task id. */
-void TodoStickies_Show(const char *taskId);
-/* Hide one sticky window (task data kept). */
-void TodoStickies_Hide(const char *taskId);
-/* Hide all sticky windows. */
+/* Show (or raise) the card of one board; creates the window if needed. */
+void TodoStickies_ShowBoard(const char *board);
+void TodoStickies_HideBoard(const char *board);
+void TodoStickies_ToggleBoard(const char *board);
 void TodoStickies_HideAll(void);
-/* Show windows for all pinned tasks (called at startup). */
+/* Show a card for every board (tray "show all stickies"). */
+void TodoStickies_ShowAll(void);
+/* Open cards for every board marked Visible=1 (called at startup). */
 void TodoStickies_RestoreAll(void);
-/* Close + forget window for a removed task. */
-void TodoStickies_Forget(const char *taskId);
-/* Whether a sticky window is currently visible for task id. */
-BOOL TodoStickies_IsVisible(const char *taskId);
-/* Pin flag stored per task; drives RestoreAll. */
-BOOL TodoSticky_IsPinned(const char *taskId);
-BOOL TodoSticky_SetPinned(const char *taskId, BOOL pinned);
-void TodoSticky_LoadGeom(const char *taskId, int *x, int *y, int *w, int *h);
-void TodoSticky_SaveGeom(const char *taskId, int x, int y, int w, int h);
-BOOL TodoSticky_IsCollapsed(const char *taskId);
-void TodoSticky_SetCollapsed(const char *taskId, BOOL collapsed);
+/* Repaint every open card (after task mutations). */
+void TodoStickies_RefreshAll(void);
+BOOL TodoStickies_IsVisible(const char *board);
+
+/* Global sticky settings (per-board override wins in TodoBoard_TopmostFor). */
 BOOL TodoSticky_TopmostGlobal(void);
 void TodoSticky_SetTopmostGlobal(BOOL topmost);
-int TodoSticky_TopmostOverride(const char *taskId);
-void TodoSticky_SetTopmostOverride(const char *taskId, int mode);
-BOOL TodoSticky_TopmostFor(const char *taskId);
-void TodoSticky_RetopAll(void);
-void TodoSticky_UpdateTips(HWND hwnd, BOOL collapsed);
-/* Opacity 30..100 percent ([Sticky] Opacity). */
 int TodoSticky_Opacity(void);
 void TodoSticky_SetOpacity(int pct);
 void TodoSticky_ApplyOpacity(HWND hwnd);
+void TodoSticky_RetopAll(void);
+void TodoSticky_UpdateTips(HWND hwnd, BOOL collapsed);
 
 #ifdef __cplusplus
 }

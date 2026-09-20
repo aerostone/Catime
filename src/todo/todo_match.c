@@ -36,5 +36,6 @@ BOOL TodoTask_MatchesFilter(const TodoTask *t, const TodoFilter *f) {
     if (!DateGe(t->doneAt, f->doneFrom)) return FALSE;
     if (!DateLe(t->doneAt, f->doneTo)) return FALSE;
     if (!KeywordHit(t->title, f->keyword)) return FALSE;
+    if (f->board[0] && strcmp(t->board, f->board) != 0) return FALSE;
     return TRUE;
 }

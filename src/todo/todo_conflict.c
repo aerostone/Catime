@@ -10,26 +10,34 @@
 
 #include <windows.h>
 
-int TodoConflict_Count(void) {
-    extern const char *TodoStore_TxtPath(void);
+#include "todo_store.h"
+
+static BOOL TxtDir(char *dir, size_t cap, char *base, size_t baseCap) {
     const char *txt = TodoStore_TxtPath();
-    if (!txt || !txt[0]) return 0;
-    char dir[MAX_PATH] = "";
+    if (!txt || !txt[0] || !dir || !cap) return FALSE;
 #if defined(_MSC_VER)
-    strcpy_s(dir, sizeof(dir), txt);
+    strcpy_s(dir, cap, txt);
 #else
-    snprintf(dir, sizeof(dir), "%s", txt);
+    snprintf(dir, cap, "%s", txt);
 #endif
     char *sep = strrchr(dir, '\\');
     if (!sep) sep = strrchr(dir, '/');
-    if (!sep) return 0;
-    char base[MAX_PATH] = "";
+    if (!sep) return FALSE;
+    if (base && baseCap) {
 #if defined(_MSC_VER)
-    strcpy_s(base, sizeof(base), sep + 1);
+        strcpy_s(base, baseCap, sep + 1);
 #else
-    snprintf(base, sizeof(base), "%s", sep + 1);
+        snprintf(base, baseCap, "%s", sep + 1);
 #endif
+    }
     *sep = '\0';
+    return TRUE;
+}
+
+int TodoConflict_Count(void) {
+    char dir[MAX_PATH] = "";
+    char base[MAX_PATH] = "";
+    if (!TxtDir(dir, sizeof(dir), base, sizeof(base))) return 0;
     char pat[MAX_PATH];
 #if defined(_MSC_VER)
     _snprintf_s(pat, sizeof(pat), _TRUNCATE, "%s\\%s.conflict-*", dir, base);
@@ -51,19 +59,8 @@ int TodoConflict_Count(void) {
 }
 
 void TodoConflict_OpenDir(HWND hwnd) {
-    extern const char *TodoStore_TxtPath(void);
-    const char *txt = TodoStore_TxtPath();
-    if (!txt || !txt[0]) return;
     char dir[MAX_PATH] = "";
-#if defined(_MSC_VER)
-    strcpy_s(dir, sizeof(dir), txt);
-#else
-    snprintf(dir, sizeof(dir), "%s", txt);
-#endif
-    char *sep = strrchr(dir, '\\');
-    if (!sep) sep = strrchr(dir, '/');
-    if (sep) *sep = '\0';
-    else return;
+    if (!TxtDir(dir, sizeof(dir), NULL, 0)) return;
     wchar_t w[MAX_PATH];
     if (!MultiByteToWideChar(CP_UTF8, 0, dir, -1, w, _countof(w))) return;
     ShellExecuteW(hwnd, L"open", w, NULL, NULL, SW_SHOWNORMAL);

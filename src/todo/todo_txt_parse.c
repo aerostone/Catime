@@ -125,6 +125,10 @@ BOOL TodoTxt_ParseLine(const char *line, TodoTask *out, const char *defDate) {
             } else if (_strnicmp(word, "srv:", 4) == 0 && word[4]) {
                 consumed = TRUE;
                 strcpy_s(out->serverId, sizeof(out->serverId), word + 4);
+            } else if (_strnicmp(word, "b:", 2) == 0 && word[2]) {
+                consumed = TRUE;
+                if (strlen(word + 2) < TODO_STORE_BOARD_LEN)
+                    strcpy_s(out->board, sizeof(out->board), word + 2);
             }
         }
         if (!consumed) {

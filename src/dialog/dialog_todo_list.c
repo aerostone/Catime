@@ -18,6 +18,7 @@
 #include "../../resource/resource.h"
 #include "dialog/dialog_registry.h"
 #include "language.h"
+#include "todo/todo_board.h"
 #include "todo/todo_store.h"
 #include "todo/todo_stickies.h"
 #include "todo/todo_sync.h"
@@ -28,18 +29,12 @@
 #include "todo/todo_ui_debug.h"
 
 
-#ifndef EM_SETCUEBANNER
-#define EM_SETCUEBANNER (0x1501)
-#endif
-#ifndef EM_SETCUEBANNER_W
-#define EM_SETCUEBANNER_W EM_SETCUEBANNER
-#endif
-
 #define TODO_KW_TIMER 7701
 #define TODO_KW_DEBOUNCE_MS 200
 
 static TodoDlgState s_state;
 static char s_preselect[TODO_STORE_ID_LEN] = "";
+static char s_board[TODO_STORE_BOARD_LEN] = ""; /* board the dialog edits */
 
 char *TodoDlg_PreselectBuf(void) {
     return s_preselect;
@@ -58,10 +53,6 @@ TodoDlgState *TodoDlg_State(void) {
     return &s_state;
 }
 
-static void ApplyScopeRange(TodoFilter *f) {
-
-    TodoDlg_ApplyScopeRange(f);
-}
 
 void TodoDlg_ReadFilterImpl(HWND hdlg, TodoFilter *f) {
     TodoFilter_InitDefault(f);
@@ -69,6 +60,7 @@ void TodoDlg_ReadFilterImpl(HWND hdlg, TodoFilter *f) {
                                         CB_GETCURSEL, 0, 0);
     if (scope == 1) f->dueScope = TODO_DUE_SCOPE_MONTH;
     else if (scope == 2) f->dueScope = TODO_DUE_SCOPE_CUSTOM;
+    else if (scope == 3) f->dueScope = TODO_DUE_SCOPE_ALL;
     else f->dueScope = TODO_DUE_SCOPE_WEEK;
     LRESULT src = SendDlgItemMessageW(hdlg, IDC_TODO_FILTER_SOURCE,
                                       CB_GETCURSEL, 0, 0);
@@ -93,7 +85,7 @@ void TodoDlg_ReadFilterImpl(HWND hdlg, TodoFilter *f) {
             strcpy_s(f->toDate, sizeof(f->toDate), u);
         }
     } else {
-        ApplyScopeRange(f);
+        TodoDlg_ApplyScopeRange(f);
     }
     wchar_t kw[TODO_STORE_TITLE_LEN];
     GetDlgItemTextW(hdlg, IDC_TODO_FILTER_KEYWORD, kw, _countof(kw));
@@ -101,6 +93,8 @@ void TodoDlg_ReadFilterImpl(HWND hdlg, TodoFilter *f) {
         WideCharToMultiByte(CP_UTF8, 0, kw, -1, f->keyword,
                             sizeof(f->keyword), NULL, NULL);
     f->showDone = IsDlgButtonChecked(hdlg, IDC_TODO_SHOW_DONE) == BST_CHECKED;
+    /* board selection wins over the source combo (mutually exclusive) */
+    TodoDlg_ApplyBoardFilter(hdlg, f);
 }
 
 /* Exported for dialog_todo_list_cmd.c: current UI filter snapshot. */
@@ -108,24 +102,6 @@ void TodoDlg_ReadFilter(HWND hdlg, TodoFilter *f) {
     TodoDlg_ReadFilterImpl(hdlg, f);
 }
 
-void TodoDlg_RefreshList(HWND hdlg);
-
-static void RefreshList(HWND hdlg) {
-
-    TodoDlg_RefreshInto(hdlg);
-}
-
-void TodoDlg_OnAdd(HWND hdlg);
-void TodoDlg_OnToggleDone(HWND hdlg);
-void TodoDlg_OnDelete(HWND hdlg);
-void TodoDlg_OnPin(HWND hdlg);
-void TodoDlg_OnSelect(HWND hdlg, int listIndex);
-void ShowTodoSettingsDialog(HWND hwndParent);
-
-static void InitCombos(HWND hdlg) {
-
-    TodoDlg_InitCombos(hdlg);
-}
 
 static void ArmKeywordTimer(HWND hdlg) {
     KillTimer(hdlg, TODO_KW_TIMER);
@@ -139,16 +115,28 @@ static INT_PTR CALLBACK TodoListProc(HWND hdlg, UINT msg,
     case WM_INITDIALOG:
         Dialog_InitializeInstance(DIALOG_INSTANCE_TODO_LIST, hdlg);
         TodoFilter_InitDefault(&s_state.filter);
-        InitCombos(hdlg);
+        TodoDlg_InitCombos(hdlg);
+        {
+            int bi = TodoBoard_IndexByName(s_board);
+            TodoDlg_InitBoardCombo(hdlg);
+            if (bi >= 0) {
+                HWND cb = GetDlgItem(hdlg, IDC_TODO_BOARD_SEL);
+                if (cb)
+                    SendMessageW(cb, CB_SETCURSEL, (WPARAM)bi, 0);
+            }
+            TodoDlg_SyncStickyButton(hdlg);
+            TodoDlg_SyncScopeCombo(hdlg);
+            s_board[0] = '\0';
+        }
         EnableWindow(GetDlgItem(hdlg, IDC_TODO_FILTER_DUE_FROM), FALSE);
         EnableWindow(GetDlgItem(hdlg, IDC_TODO_FILTER_DUE_TO), FALSE);
-        RefreshList(hdlg);
+        TodoDlg_RefreshInto(hdlg);
         TodoUiDebug_DumpDialog(hdlg, "todo-list");
         return TRUE;
     case WM_TIMER:
         if (wp == TODO_KW_TIMER) {
             KillTimer(hdlg, TODO_KW_TIMER);
-            RefreshList(hdlg);
+            TodoDlg_RefreshInto(hdlg);
             return TRUE;
         }
         break;
@@ -159,6 +147,7 @@ static INT_PTR CALLBACK TodoListProc(HWND hdlg, UINT msg,
             DestroyWindow(hdlg);
             return TRUE;
         }
+        if (TodoDlg_BoardCommand(hdlg, id, code)) return TRUE;
         if (id == IDC_TODO_ADD_BUTTON) {
             TodoDlg_OnAdd(hdlg);
             return TRUE;
@@ -171,17 +160,13 @@ static INT_PTR CALLBACK TodoListProc(HWND hdlg, UINT msg,
             TodoDlg_OnDelete(hdlg);
             return TRUE;
         }
-        if (id == IDC_TODO_PIN_BUTTON) {
-            TodoDlg_OnPin(hdlg);
+        if (id == IDC_TODO_SYNC_NOW_BTN) {
+            TodoSync_PollNow();
+            TodoDlg_RefreshInto(hdlg);
             return TRUE;
         }
-        if (id == IDC_TODO_SYNC_NOW_BTN) {
-            if (TodoConflict_Count() > 0)
-                TodoConflict_OpenDir(hdlg);
-            else {
-                TodoSync_PollNow();
-                RefreshList(hdlg);
-            }
+        if (id == IDC_TODO_CONFLICT_BTN) {
+            TodoConflict_OpenDir(hdlg);
             return TRUE;
         }
         if (id == IDC_TODO_SETTINGS_BTN) {
@@ -202,8 +187,13 @@ static INT_PTR CALLBACK TodoListProc(HWND hdlg, UINT msg,
                 BOOL custom = (sel == 2);
                 EnableWindow(GetDlgItem(hdlg, IDC_TODO_FILTER_DUE_FROM), custom);
                 EnableWindow(GetDlgItem(hdlg, IDC_TODO_FILTER_DUE_TO), custom);
+                /* the board owns its scope: keep card and list in sync */
+                TodoDlg_PersistScope(hdlg, (TodoDueScope)(
+                    sel == 1 ? TODO_DUE_SCOPE_MONTH :
+                    sel == 2 ? TODO_DUE_SCOPE_CUSTOM :
+                    sel == 3 ? TODO_DUE_SCOPE_ALL : TODO_DUE_SCOPE_WEEK));
             }
-            RefreshList(hdlg);
+            TodoDlg_RefreshInto(hdlg);
             return TRUE;
         }
         /* B3: date edits commit on focus-loss, keyword debounced live */
@@ -213,11 +203,11 @@ static INT_PTR CALLBACK TodoListProc(HWND hdlg, UINT msg,
         }
         if ((id == IDC_TODO_FILTER_DUE_FROM || id == IDC_TODO_FILTER_DUE_TO) &&
             code == EN_KILLFOCUS) {
-            RefreshList(hdlg);
+            TodoDlg_RefreshInto(hdlg);
             return TRUE;
         }
         if (id == IDC_TODO_SHOW_DONE && code == BN_CLICKED) {
-            RefreshList(hdlg);
+            TodoDlg_RefreshInto(hdlg);
             return TRUE;
         }
         break;
@@ -234,7 +224,7 @@ static INT_PTR CALLBACK TodoListProc(HWND hdlg, UINT msg,
 }
 
 void TodoDlg_RefreshList(HWND hdlg) {
-    RefreshList(hdlg);
+    TodoDlg_RefreshInto(hdlg);
 }
 
 void ShowTodoListDialog(HWND hwndParent) {
@@ -250,11 +240,18 @@ void ShowTodoListDialog(HWND hwndParent) {
 }
 
 /* "New Task" focuses the list dialog title edit instead of cloning it. */
-void ShowTodoListDialogForNew(HWND hwndParent) {
+void ShowTodoListDialogForBoard(HWND hwndParent, const char *board,
+                                BOOL addNew) {
+    if (board && board[0])
+        strcpy_s(s_board, sizeof(s_board), board);
     ShowTodoListDialog(hwndParent);
     HWND ex = Dialog_GetInstance(DIALOG_INSTANCE_TODO_LIST);
-    if (ex) {
+    if (ex && addNew) {
         HWND edit = GetDlgItem(ex, IDC_TODO_NEW_EDIT);
         if (edit) SetFocus(edit);
     }
+}
+
+void ShowTodoListDialogForNew(HWND hwndParent) {
+    ShowTodoListDialogForBoard(hwndParent, NULL, TRUE);
 }

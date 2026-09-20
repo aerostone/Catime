@@ -21,6 +21,7 @@
 #include "tray/tray_menu_font.h"
 #include "tray/tray_menu_theme.h"
 #include "todo/todo_stickies.h"
+#include "todo/todo_board.h"
 #include "todo/todo_store.h"
 #include "todo/todo_sync.h"
 #include "todo/todo_ui_debug.h"
@@ -223,6 +224,8 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
         }
         TodoSync_Init(hwnd, iniW[0] ? iniW : NULL);
         TodoStore_Init(iniW[0] ? iniW : NULL);
+        /* boards must exist before any card is restored */
+        TodoBoard_Init();
         TodoStickies_RestoreAll();
     }
     InitializeAsyncCaches(hwnd);

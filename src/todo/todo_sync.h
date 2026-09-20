@@ -18,6 +18,8 @@ extern "C" {
 
 /* Lifecycle */
 BOOL TodoSync_Init(HWND hwndMain, const wchar_t *iniPath);
+/* Main window handle (NULL before Init) for dialogs/window parents. */
+HWND TodoSync_MainHwnd(void);
 void TodoSync_Shutdown(void);
 /* Force one poll now (tray menu / wake / settings change). */
 void TodoSync_PollNow(void);

@@ -11,8 +11,11 @@
  */
 #include <string.h>
 
+#include "timer/timer.h"
+#include "timer/timer_events.h"
 #include "todo_stickies.h"
 #include "todo_store.h"
+#include "window_procedure/window_procedure.h"
 
 #include "todo_sticky_pomo.h"
 
@@ -20,7 +23,6 @@ static char s_pomoTaskId[TODO_STORE_ID_LEN] = "";
 static HWND s_mainHwnd = NULL;
 
 void TodoStickyPomo_Start(HWND mainHwnd, const char *taskId) {
-    void StartPomodoroTimer(HWND hwnd);
     if (!taskId || !taskId[0]) return;
     TodoTask t;
     memset(&t, 0, sizeof(t));
@@ -44,9 +46,6 @@ const char *TodoStickyPomo_TaskId(void) {
 
 /* Remaining seconds of the running pomo (0 when idle). */
 int TodoStickyPomo_Remaining(void) {
-    extern int CLOCK_TOTAL_TIME;
-    extern int countdown_elapsed_time;
-    extern BOOL TimerEvents_IsActivePomodoroTimer(void);
     if (!s_pomoTaskId[0]) return 0;
     if (!TimerEvents_IsActivePomodoroTimer()) return 0;
     int rem = CLOCK_TOTAL_TIME - countdown_elapsed_time;

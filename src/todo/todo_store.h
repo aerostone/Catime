@@ -23,11 +23,17 @@ void TodoStore_Shutdown(void);
 
 /* CRUD on local tasks. Returns FALSE on full/invalid input. */
 BOOL TodoStore_Add(const char *title, TodoImportance imp, const char *dueDate);
+/* Add into a specific board (empty board = TODO_BOARD_DEFAULT). */
+BOOL TodoStore_AddTo(const char *title, TodoImportance imp, const char *dueDate,
+                     const char *board);
 BOOL TodoStore_SetDone(const char *id, BOOL done);
 BOOL TodoStore_Remove(const char *id);
 BOOL TodoStore_SetImportance(const char *id, TodoImportance imp);
 BOOL TodoStore_SetDueDate(const char *id, const char *dueDate);
 BOOL TodoStore_SetPinned(const char *id, BOOL pinned);
+/* Board membership (See todo_board.h for the board list itself). */
+BOOL TodoStore_SetBoard(const char *id, const char *board);
+void TodoStore_ReassignBoard(const char *oldName, const char *newName);
 
 /* Count of local tasks (open + done). */
 int TodoStore_LocalCount(void);

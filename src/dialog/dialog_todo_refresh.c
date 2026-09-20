@@ -21,18 +21,17 @@
 #include "dialog/dialog_todo_list_state.h"
 #include "dialog/dialog_todo_parts.h"
 
-static char *PreselectBuf(void) {
-
-    return TodoDlg_PreselectBuf();
-}
-
 void TodoDlg_RefreshInto(HWND hdlg) {
     TodoDlgState *ps = TodoDlg_State();
 #define s_state (*ps)
-    char *s_preselect = PreselectBuf();
+    char *s_preselect = TodoDlg_PreselectBuf();
     TodoDlg_ReadFilter(hdlg, &s_state.filter);
-    s_state.rowCount = TodoStore_Query(&s_state.filter, s_state.rows,
-                                      TODO_DLG_MAX_ROWS);
+    {
+        /* keep showing freshly added local tasks (the dialog never
+         * reloads from disk, so the store snapshot is authoritative) */
+        s_state.rowCount = TodoStore_Query(&s_state.filter, s_state.rows,
+                                           TODO_DLG_MAX_ROWS);
+    }
     HWND list = GetDlgItem(hdlg, IDC_TODO_LIST_VIEW);
     SendMessageW(list, LB_RESETCONTENT, 0, 0);
     /* keep selection on same id across refreshes (B3 fix) */
@@ -46,16 +45,16 @@ void TodoDlg_RefreshInto(HWND hdlg) {
     s_state.selected = -1;
     for (int i = 0; i < s_state.rowCount; i++) {
         TodoTask *t = &s_state.rows[i];
-        char row[256];
+        char row[320];
+        const char *tag = t->source == TODO_SOURCE_SYNC ? " [\u540c\u6b65]"
+                                                        : "";
         if (t->dueDate[0])
             _snprintf_s(row, sizeof(row), _TRUNCATE, "%s %s %s%s",
-                        TodoRowMark(t), t->dueDate, t->title,
-                        t->source == TODO_SOURCE_SYNC ? " (sync)" : "");
+                        TodoRowMark(t), t->dueDate, t->title, tag);
         else
             _snprintf_s(row, sizeof(row), _TRUNCATE, "%s %s%s",
-                        TodoRowMark(t), t->title,
-                        t->source == TODO_SOURCE_SYNC ? " (sync)" : "");
-        wchar_t wr[256];
+                        TodoRowMark(t), t->title, tag);
+        wchar_t wr[320];
         if (MultiByteToWideChar(CP_UTF8, 0, row, -1, wr, _countof(wr))) {
             int idx = (int)SendMessageW(list, LB_ADDSTRING, 0, (LPARAM)wr);
             if (keepId[0] && strcmp(t->id, keepId) == 0 && idx >= 0) {

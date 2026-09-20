@@ -180,6 +180,11 @@
 #define IDC_TODO_GROUP_SYNC 812           /**< Settings sync group */
 #define IDC_TODO_GROUP_STICKY 813         /**< Settings sticky group */
 #define IDC_TODO_STICKY_OPACITY 814       /**< Sticky opacity combo */
+#define IDC_TODO_BOARD_SEL 815            /**< Board selector combo in list dialog */
+#define IDC_TODO_BOARD_NEW 816            /**< New board button */
+#define IDC_TODO_BOARD_RENAME 817         /**< Rename board button */
+#define IDC_TODO_BOARD_DEL 818            /**< Delete board button */
+#define IDC_TODO_BOARD_SHOW 819           /**< Show/hide the board sticky button */
 
 /** @brief Custom text display dialog identifiers */
 #define IDD_CUSTOM_TEXT_DISPLAY_DIALOG 770      /**< Custom text display dialog */

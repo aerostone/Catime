@@ -4,6 +4,8 @@
  *
  * Sort: overdue (past-due, open) first, then due date asc
  * (dateless last), then importance desc, then title.
+ * The merged-sync pseudo rows (V: ids) are gone: pulled tasks are real
+ * store rows now (see todo_sync_merge.c).
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,43 +15,6 @@
 #include "todo_sync.h"
 
 int TodoStore_SnapshotLocal(TodoTask *o, int cap);
-
-static int AppendSync(TodoTask *out, int cap) {
-    char lines[24][256];
-    int n = TodoSync_GetLines(lines, 24);
-    int today = 0, overdue = 0, someday = 0, pomo = 0;
-    TodoSync_GetCounts(&today, &overdue, &someday, &pomo);
-    (void)today; (void)someday; (void)pomo;
-    int count = 0;
-    for (int i = 0; i < n && count < cap; i++) {
-        TodoTask t;
-        memset(&t, 0, sizeof(t));
-        t.source = TODO_SOURCE_SYNC;
-        /* view-only: actionable sync rows live in local store (C:/L: ids
-         * via merge). V: rows are display-only, never pushed. */
-        _snprintf_s(t.id, sizeof(t.id), _TRUNCATE, "V:%d", i);
-        /* lines look like " [ ] title" / " ! title": strip marker */
-        const char *p = lines[i];
-        while (*p == ' ') p++;
-        if (p[0] == '[' && p[3] == ']') p += 4;
-        else if (p[0] == '!') p += 1;
-        while (*p == ' ') p++;
-        strcpy_s(t.title, sizeof(t.title), p);
-        t.done = FALSE;
-        /* first `overdue` rows are overdue: backfill due as yesterday */
-        if (i < overdue) {
-            SYSTEMTIME st;
-            GetLocalTime(&st);
-            int d = (int)st.wDay - 1; /* sort hint only */
-            if (d < 1) d = 1;
-            _snprintf_s(t.dueDate, sizeof(t.dueDate), _TRUNCATE,
-                        "%04d-%02d-%02d", (int)st.wYear, (int)st.wMonth, d);
-        }
-        t.importance = (i < overdue) ? TODO_IMPORTANCE_HIGH : TODO_IMPORTANCE_NONE;
-        out[count++] = t;
-    }
-    return count;
-}
 
 static BOOL IsOverdue(const TodoTask *t, const char *todayStr) {
     if (t->done || !t->dueDate[0]) return FALSE;
@@ -84,14 +49,10 @@ int TodoStore_Query(const TodoFilter *filter, TodoTask *out, int outCap) {
         TodoFilter_InitDefault(&df);
         filter = &df;
     }
+    /* Sync-board rows are materialised into the store by the merge
+     * driver, so the view is store-only (no pseudo V: rows). */
     TodoTask buf[TODO_STORE_MAX_TASKS];
     int n = TodoStore_SnapshotLocal(buf, TODO_STORE_MAX_TASKS);
-    {
-        TodoTask sync[24];
-        int sn = AppendSync(sync, 24);
-        for (int i = 0; i < sn && n < TODO_STORE_MAX_TASKS; i++)
-            buf[n++] = sync[i];
-    }
     TodoTask kept[TODO_STORE_MAX_TASKS];
     int k = 0;
     for (int i = 0; i < n; i++) {

@@ -91,6 +91,9 @@ BOOL TodoStore_UpdateFromSyncStamp(const char *id, const char *title,
         if (srvStamp > 0) t->updatedAt = srvStamp;
         if (srvId && srvId[0])
             strcpy_s(t->serverId, sizeof(t->serverId), srvId);
+        /* pulled rows land on the sync board and are never local ones */
+        strcpy_s(t->board, sizeof(t->board), TODO_BOARD_SYNC);
+        t->source = TODO_SOURCE_SYNC;
         TodoStore_Save();
         ok = TRUE;
     }
@@ -127,6 +130,9 @@ BOOL TodoStore_InsertSyncedStamp(const char *id, const char *title,
         else t->updatedAt = 0; /* unknown age: pull wins once, then stable */
         if (srvId && srvId[0])
             strcpy_s(t->serverId, sizeof(t->serverId), srvId);
+        /* pulled rows land on the sync board and are never local ones */
+        strcpy_s(t->board, sizeof(t->board), TODO_BOARD_SYNC);
+        t->source = TODO_SOURCE_SYNC;
         TodoStore_Save();
         ok = TRUE;
     }

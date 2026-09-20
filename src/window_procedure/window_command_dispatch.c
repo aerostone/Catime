@@ -61,6 +61,7 @@ static const CommandDispatchEntry COMMAND_DISPATCH_TABLE[] = {
     {CLOCK_IDM_TODO_LIST, CmdTodoList},
     {CLOCK_IDM_TODO_NEW, CmdTodoNew},
     {CLOCK_IDM_TODO_NEW_STICKY, CmdTodoNewSticky},
+    {CLOCK_IDM_TODO_SHOW_ALL, CmdTodoShowAll},
     {CLOCK_IDM_TODO_SETTINGS, CmdTodoSettings},
     {CLOCK_IDM_TODO_SYNC_NOW, CmdTodoSyncNow},
     {0, NULL}

@@ -1,163 +1,211 @@
 /**
  * @file todo_sticky_rowmenu.c
- * @brief Sticky right-click menu: id-keyed row actions.
+ * @brief Card + task-row context menus for sticky boards.
  *
- * Menu is built from the bound task id (never row position):
- * - start pomo on this task, toggle done, expand/collapse,
- *   per-card topmost, unpin. Rename + delete retired: all edits
- *   live in the task list dialog; the card is display-only.
- * SetCollapsedUI resizes window + persists flag. ApplyTopmost flips
- * z-order per override. FindCatimeMainWindow locates the main HWND
- * for launching the shared pomodoro timer.
+ * Card menu: new task / open list / week-all / collapse / topmost / hide.
+ * Row menu : done toggle / pomodoro / due / importance / move / delete.
+ * All mutations go through the store (id-keyed) so the next paint and the
+ * next sync round see the same state.
  */
 #include <stdio.h>
 #include <string.h>
+#include <windows.h>
 
+#include "dialog/dialog_todo.h"
+#include "language.h"
+#include "todo_board.h"
 #include "todo_stickies.h"
 #include "todo_store.h"
+#include "todo_sync.h"
 #include "todo_sticky_pomo.h"
 
 #include "todo_stickies_slot.h"
-#include "language.h"
 
-#define STICKY_TIMER_POMO 9201
+#define ROW_MENU_BOARD_BASE 9400
 
+static void Repaint(StickyWin *sw) { TodoSticky_Repaint(sw); }
 
+static HWND MainHwnd(void) { return TodoSync_MainHwnd(); }
 
-#define STICKY_BAR_H 32
-#define STICKY_MENU_DONE 9101
-#define STICKY_MENU_UNPIN 9102
-#define STICKY_MENU_EXPAND 9104
-#define STICKY_MENU_TOPMOST 9105
-#define STICKY_MENU_POMO 9106
-
-void TodoSticky_SetCollapsedUI(HWND hwnd, StickyWin *sw, BOOL collapsed) {
-    if (!hwnd || !sw) return;
-    sw->collapsed = collapsed ? TRUE : FALSE;
-    TodoSticky_SetCollapsed(sw->taskId, sw->collapsed);
-    RECT wr;
-    GetWindowRect(hwnd, &wr);
-    int w = wr.right - wr.left;
-    if (sw->collapsed) {
-        /* dot mode: remember full size, shrink to a 32px square */
-        sw->expandH = wr.bottom - wr.top;
-        sw->expandW = w;
-        SetWindowPos(hwnd, NULL, 0, 0, STICKY_DOT_SIZE, STICKY_DOT_SIZE,
-                     SWP_NOMOVE | SWP_NOZORDER);
-    } else {
-        int h = sw->expandH >= 150 ? sw->expandH : 220;
-        int ew = sw->expandW >= 200 ? sw->expandW : 300;
-        SetWindowPos(hwnd, NULL, 0, 0, ew, h, SWP_NOMOVE | SWP_NOZORDER);
-    }
-    InvalidateRect(hwnd, NULL, TRUE);
-}
-
-void TodoSticky_ApplyTopmost(HWND hwnd, StickyWin *sw) {
-    if (!hwnd || !sw) return;
-    BOOL top = TodoSticky_TopmostFor(sw->taskId);
-    SetWindowPos(hwnd, top ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0,
-                 SWP_NOMOVE | SWP_NOSIZE);
-}
-
-HWND FindCatimeMainWindow(void) {
-    extern HWND g_todoSyncHwnd;
-    return g_todoSyncHwnd;
-}
-
-void TodoSticky_ShowRowMenu(HWND hwnd, StickyWin *sw) {
-    if (!hwnd || !sw) return;
-    TodoTask t;
-    memset(&t, 0, sizeof(t));
-    TodoFilter f;
-    TodoFilter_InitDefault(&f);
-    f.showDone = TRUE;
-    f.showSync = FALSE;
-    TodoTask buf[TODO_STORE_MAX_TASKS];
-    int n = TodoStore_Query(&f, buf, TODO_STORE_MAX_TASKS);
-    BOOL found = FALSE;
-    for (int i = 0; i < n; i++) {
-        if (strcmp(buf[i].id, sw->taskId) == 0) {
-            t = buf[i];
-            found = TRUE;
-            break;
-        }
-    }
+/* ---- card menu ----------------------------------------------------- */
+void TodoSticky_ShowCardMenu(HWND hwnd, StickyWin *sw) {
+    if (!sw) return;
+    BOOL week = TodoBoard_Scope(sw->board) != TODO_DUE_SCOPE_ALL;
     HMENU m = CreatePopupMenu();
     if (!m) return;
-    /* D5+D7: gray header anchors the task; labels localized. */
-    wchar_t wt[TODO_STORE_TITLE_LEN];
-    MultiByteToWideChar(CP_UTF8, 0, found ? t.title : sw->taskId, -1, wt,
-                        _countof(wt));
-    wchar_t head[TODO_STORE_TITLE_LEN + 4];
-    wcsncpy_s(head, _countof(head), wt, 20);
-    head[20] = L'\0';
-    if (found && wcslen(wt) > 20) wcscat_s(head, _countof(head), L"\u2026");
-    AppendMenuW(m, MF_STRING | MF_DISABLED | MF_GRAYED, 0, head);
+    AppendMenuW(m, MF_STRING, STICKY_CMD_NEW_TASK,
+                GetLocalizedString(L"新建任务...", L"New task..."));
+    AppendMenuW(m, MF_STRING, STICKY_CMD_OPEN_LIST,
+                GetLocalizedString(L"打开任务列表...", L"Open task list..."));
     AppendMenuW(m, MF_SEPARATOR, 0, NULL);
-    wchar_t pomo[48];
-    _snwprintf_s(pomo, _countof(pomo), _TRUNCATE, L"\u25b6 %s",
-                 GetLocalizedString(L"\u5f00\u59cb\u756a\u8304", L"Start pomodoro"));
-    AppendMenuW(m, MF_STRING, STICKY_MENU_POMO, pomo);
-    AppendMenuW(m, MF_STRING, STICKY_MENU_DONE,
-                (found && t.done) ? GetLocalizedString(L"\u6807\u4e3a\u672a\u5b8c\u6210", L"Mark open")
-                                    : GetLocalizedString(L"\u6807\u4e3a\u5b8c\u6210", L"Mark done"));
+    AppendMenuW(m, MF_STRING | (week ? MF_CHECKED : 0), STICKY_CMD_SCOPE,
+                week ? GetLocalizedString(L"只看本周", L"This week only")
+                     : GetLocalizedString(L"显示全部", L"Show all"));
+    AppendMenuW(m, MF_STRING, STICKY_CMD_FOLD,
+                GetLocalizedString(L"折叠 / 展开", L"Collapse / expand"));
+    AppendMenuW(m, MF_STRING | (TodoBoard_TopmostFor(sw->board) ? MF_CHECKED : 0),
+                STICKY_CMD_TOPMOST,
+                GetLocalizedString(L"置顶显示", L"Always on top"));
     AppendMenuW(m, MF_SEPARATOR, 0, NULL);
-    AppendMenuW(m, MF_STRING, STICKY_MENU_EXPAND,
-                sw->collapsed ? GetLocalizedString(L"\u5c55\u5f00", L"Expand")
-                                : GetLocalizedString(L"\u6536\u8d77", L"Collapse"));
-    AppendMenuW(m, MF_STRING | (TodoSticky_TopmostFor(sw->taskId) ? MF_CHECKED : 0),
-                STICKY_MENU_TOPMOST,
-                GetLocalizedString(L"\u7f6e\u9876\u6b64\u5361", L"Pin on top"));
-    AppendMenuW(m, MF_SEPARATOR, 0, NULL);
-    AppendMenuW(m, MF_STRING, STICKY_MENU_UNPIN,
-                GetLocalizedString(L"\u53d6\u6d88\u7f6e\u9876", L"Unpin"));
+    AppendMenuW(m, MF_STRING, STICKY_CMD_HIDE,
+                GetLocalizedString(L"隐藏便签", L"Hide sticky"));
     POINT pt;
     GetCursorPos(&pt);
-    UINT cmd = TrackPopupMenu(m, TPM_RETURNCMD, pt.x, pt.y, 0, hwnd, NULL);
+    int cmd = (int)TrackPopupMenu(m, TPM_RETURNCMD | TPM_RIGHTBUTTON, pt.x,
+                                  pt.y, 0, hwnd, NULL);
     DestroyMenu(m);
-    TodoSticky_RunMenuById(hwnd, sw, cmd);
-}
-
-void TodoSticky_RunMenuById(HWND hwnd, StickyWin *sw, unsigned cmd) {
-    if (!hwnd || !sw) return;
-    const char *taskId = sw->taskId;
-    TodoTask tk;
-    BOOL done = FALSE;
-    {
-        TodoFilter fr;
-        TodoFilter_InitDefault(&fr);
-        fr.showDone = TRUE;
-        fr.showSync = FALSE;
-        TodoTask bq[TODO_STORE_MAX_TASKS];
-        int nq = TodoStore_Query(&fr, bq, TODO_STORE_MAX_TASKS);
-        for (int i = 0; i < nq; i++) {
-            if (strcmp(bq[i].id, taskId) == 0) {
-                tk = bq[i];
-                done = tk.done;
-                break;
-            }
-        }
+    if (!cmd) return;
+    switch (cmd) {
+    case STICKY_CMD_NEW_TASK:
+        ShowTodoListDialogForBoard(MainHwnd(), sw->board, TRUE);
+        break;
+    case STICKY_CMD_OPEN_LIST:
+        ShowTodoListDialogForBoard(MainHwnd(), sw->board, FALSE);
+        break;
+    case STICKY_CMD_SCOPE:
+        TodoBoard_SetScope(sw->board, week ? TODO_DUE_SCOPE_ALL
+                                           : TODO_DUE_SCOPE_WEEK);
+        Repaint(sw);
+        break;
+    case STICKY_CMD_FOLD:
+        TodoSticky_SetCollapsedUI(hwnd, sw, !sw->collapsed);
+        break;
+    case STICKY_CMD_TOPMOST: {
+        int ov = TodoBoard_TopmostOverride(sw->board);
+        TodoBoard_SetTopmostOverride(sw->board, ov == 1 ? 0 : 1);
+        TodoSticky_RetopAll();
+        break;
     }
-    if (cmd == STICKY_MENU_DONE) {
-        TodoStore_SetDone(taskId, !done);
-        InvalidateRect(hwnd, NULL, TRUE);
-    } else if (cmd == STICKY_MENU_UNPIN) {
-        TodoSticky_SetPinned(taskId, FALSE);
-    } else if (cmd == STICKY_MENU_EXPAND) {
-        if (sw->collapsed) TodoSticky_SetCollapsedUI(hwnd, sw, FALSE);
-        else TodoSticky_SetCollapsedUI(hwnd, sw, TRUE);
-        TodoSticky_UpdateTips(hwnd, sw->collapsed);
-    } else if (cmd == STICKY_MENU_TOPMOST) {
-        int ov = TodoSticky_TopmostOverride(taskId);
-        int next = (ov == 1) ? 0 : 1;
-        TodoSticky_SetTopmostOverride(taskId, next);
-        TodoSticky_ApplyTopmost(hwnd, sw);
-    } else if (cmd == STICKY_MENU_POMO) {
-        HWND main = FindCatimeMainWindow();
-        TodoStickyPomo_Start(main, taskId);
-        sw->collapsed = FALSE;
-        SetTimer(hwnd, STICKY_TIMER_POMO, 1000, NULL);
-        InvalidateRect(hwnd, NULL, TRUE);
+    case STICKY_CMD_HIDE:
+        TodoStickies_HideBoard(sw->board);
+        break;
+    default:
+        break;
     }
 }
 
+/* ---- row menu ------------------------------------------------------ */
+static BOOL LoadTask(const char *id, TodoTask *out) {
+    memset(out, 0, sizeof(*out));
+    return TodoStore_FindById(id, out);
+}
+
+static void AddDueItems(HMENU m, const TodoTask *t) {
+    AppendMenuW(m, MF_SEPARATOR, 0, NULL);
+    AppendMenuW(m, MF_STRING, STICKY_CMD_ROW_DUE,
+                GetLocalizedString(L"设置截止日期...", L"Set due date..."));
+    AppendMenuW(m, MF_STRING, STICKY_CMD_ROW_IMP,
+                GetLocalizedString(L"调整优先级...", L"Change importance..."));
+    (void)t;
+}
+
+static void AddBoardItems(HMENU m, const char *board) {
+    HMENU sub = CreatePopupMenu();
+    if (!sub) return;
+    AppendMenuW(m, MF_SEPARATOR, 0, NULL);
+    int n = TodoBoard_Count();
+    for (int i = 0; i < n; i++) {
+        const char *name = TodoBoard_NameAt(i);
+        if (!name[0] || strcmp(name, TODO_BOARD_SYNC) == 0) continue;
+        if (strcmp(name, board) == 0) continue;
+        wchar_t wname[TODO_STORE_BOARD_LEN];
+        MultiByteToWideChar(CP_UTF8, 0, name, -1, wname,
+                            TODO_STORE_BOARD_LEN);
+        AppendMenuW(sub, MF_STRING, ROW_MENU_BOARD_BASE + i, wname);
+    }
+    if (GetMenuItemCount(sub) > 0)
+        AppendMenuW(m, MF_STRING | MF_POPUP, (UINT_PTR)sub,
+                    GetLocalizedString(L"移动到便签", L"Move to board"));
+    else
+        DestroyMenu(sub);
+}
+
+void TodoSticky_ShowRowMenu(HWND hwnd, StickyWin *sw, int row) {
+    if (!sw || row < 0) {
+        TodoSticky_ShowCardMenu(hwnd, sw);
+        return;
+    }
+    char id[TODO_STORE_ID_LEN] = "";
+    if (!TodoSticky_RowIdAt(sw->board, row, id, sizeof(id))) {
+        TodoSticky_ShowCardMenu(hwnd, sw);
+        return;
+    }
+    TodoTask t;
+    if (!LoadTask(id, &t)) return;
+    strcpy_s(sw->menuTaskId, sizeof(sw->menuTaskId), id);
+    HMENU m = CreatePopupMenu();
+    if (!m) return;
+    AppendMenuW(m, MF_STRING, STICKY_CMD_ROW_DONE,
+                t.done ? GetLocalizedString(L"标记未完成", L"Mark not done")
+                       : GetLocalizedString(L"标记完成", L"Mark done"));
+    AppendMenuW(m, MF_STRING, STICKY_CMD_ROW_POMO,
+                GetLocalizedString(L"开始番茄钟", L"Start pomodoro"));
+    AddDueItems(m, &t);
+    if (t.source != TODO_SOURCE_SYNC) AddBoardItems(m, sw->board);
+    AppendMenuW(m, MF_SEPARATOR, 0, NULL);
+    AppendMenuW(m, MF_STRING, STICKY_CMD_ROW_DELETE,
+                GetLocalizedString(L"删除任务", L"Delete task"));
+    POINT pt;
+    GetCursorPos(&pt);
+    int cmd = (int)TrackPopupMenu(m, TPM_RETURNCMD | TPM_RIGHTBUTTON, pt.x,
+                                  pt.y, 0, hwnd, NULL);
+    DestroyMenu(m);
+    if (!cmd) return;
+    if (cmd >= ROW_MENU_BOARD_BASE) {
+        const char *dest = TodoBoard_NameAt(cmd - ROW_MENU_BOARD_BASE);
+        if (dest[0]) TodoBoard_AssignTask(id, dest);
+        Repaint(sw);
+        return;
+    }
+    TodoSticky_RowMenuCommand(hwnd, sw, (UINT)cmd);
+}
+
+/* Due/importance edits reuse the list dialog, which owns the date and
+ * priority pickers; the row is preselected there. */
+static void EditInList(StickyWin *sw) {
+    TodoDlg_Preselect(sw->menuTaskId);
+    ShowTodoListDialogForBoard(MainHwnd(), sw->board, FALSE);
+}
+
+void TodoSticky_RowMenuCommand(HWND hwnd, StickyWin *sw, UINT cmd) {
+    if (!sw || !sw->menuTaskId[0]) return;
+    TodoTask t;
+    if (!LoadTask(sw->menuTaskId, &t)) {
+        sw->menuTaskId[0] = '\0';
+        Repaint(sw);
+        return;
+    }
+    switch (cmd) {
+    case STICKY_CMD_ROW_DONE:
+        TodoStore_SetDone(t.id, !t.done);
+        TodoSync_PollNow();
+        break;
+    case STICKY_CMD_ROW_POMO:
+        TodoStickyPomo_Start(MainHwnd(), t.id);
+        break;
+    case STICKY_CMD_ROW_DUE:
+    case STICKY_CMD_ROW_IMP:
+        EditInList(sw);
+        return;
+    case STICKY_CMD_ROW_DELETE: {
+        wchar_t wt[TODO_STORE_TITLE_LEN], msg[320];
+        wchar_t fmt[192];
+        MultiByteToWideChar(CP_UTF8, 0, t.title, -1, wt, TODO_STORE_TITLE_LEN);
+        wcsncpy_s(fmt, 192,
+                  GetLocalizedString(
+                      L"删除“%s”？服务端任务也会被删除。",
+                      L"Delete \"%s\"? The server copy is deleted too."),
+                  _TRUNCATE);
+        _snwprintf_s(msg, 320, _TRUNCATE, fmt, wt);
+        if (MessageBoxW(hwnd, msg, L"TODO",
+                        MB_OKCANCEL | MB_ICONWARNING) != IDOK)
+            return;
+        TodoStore_Remove(t.id);
+        TodoSync_PollNow();
+        break;
+    }
+    default:
+        break;
+    }
+    Repaint(sw);
+}

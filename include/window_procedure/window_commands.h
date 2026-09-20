@@ -65,9 +65,14 @@ BOOL HandlePomodoroTime(HWND hwnd, UINT cmd, int index);
 BOOL HandlePomodoroTimeConfig(HWND hwnd, int selectedIndex);
 #define TODO_MENU_TASK_BASE 5600
 #define TODO_MENU_TASK_COUNT 5
+#define TODO_MENU_BOARD_BASE 5710
+#define TODO_MENU_BOARD_COUNT 8 /* TODO_BOARD_MAX */
+#define TODO_MENU_CONFLICT_BASE 5700
 
 BOOL HandleTodoMenuRow(HWND hwnd, UINT cmd, int index);
 BOOL HandleTodoMenuConflict(HWND hwnd, UINT cmd, int index);
+UINT TodoMenu_ConflictId(void);
+BOOL HandleTodoMenuBoard(HWND hwnd, UINT cmd, int index);
 
 /* ============================================================================
  * Plugin Commands (window_commands_plugin.c)

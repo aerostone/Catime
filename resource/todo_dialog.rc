@@ -3,11 +3,12 @@
  * @brief TODO task list + sync settings dialogs.
  *
  * Layout contracts (dialog units, 96-DPI base):
- * - list dialog 470x330: filter rows occupy y=6..40 grouped; list y=46..252;
- *   add row y=258..270; action row y=278..292. Second filter row is split:
- *   time-scope cols x=8..250, status/search cols x=256..462, so no overlap.
- * - settings dialog 300x210: sync GROUPBOX y=4..142, sticky GROUPBOX
- *   y=146..178, buttons y=186. UiDebug dump tags: "todo-list"/"todo-settings".
+ * - list dialog 470x330: filter row y=2..40 split into two GROUPBOXes
+ *   (time scope x=4..254, state/search x=258..466) so no label overlaps an
+ *   input; task list y=46..252; add row y=256..270; action row y=278..292;
+ *   board row y=299..313 (Close right-aligned at x=412).
+ * - settings dialog 300x232: sync GROUPBOX y=4..142, sticky GROUPBOX
+ *   y=146..204, buttons y=210..224. UiDebug dump tags: "todo-list"/"todo-settings".
  */
 #include "resource.h"
 #include <windows.h>
@@ -29,8 +30,6 @@ BEGIN
     EDITTEXT    IDC_TODO_FILTER_KEYWORD, 264, 28, 128, 11, ES_AUTOHSCROLL
     EDITTEXT    IDC_TODO_FILTER_DONE_FROM, 396, 28, 0, 0, ES_AUTOHSCROLL | NOT WS_VISIBLE
     EDITTEXT    IDC_TODO_FILTER_DONE_TO, 396, 28, 0, 0, ES_AUTOHSCROLL | NOT WS_VISIBLE
-    PUSHBUTTON  "Sync", IDC_TODO_SYNC_NOW_BTN, 398, 4, 30, 12
-    PUSHBUTTON  "Cfg", IDC_TODO_SETTINGS_BTN, 430, 4, 30, 12
     LISTBOX     IDC_TODO_LIST_VIEW, 8, 46, 454, 206, LBS_NOTIFY | WS_VSCROLL | WS_BORDER | WS_TABSTOP
     EDITTEXT    IDC_TODO_NEW_EDIT, 8, 258, 200, 12, ES_AUTOHSCROLL
     EDITTEXT    IDC_TODO_NEW_DUE, 212, 258, 64, 12, ES_AUTOHSCROLL
@@ -38,8 +37,15 @@ BEGIN
     PUSHBUTTON  "Add", IDC_TODO_ADD_BUTTON, 344, 256, 40, 14
     PUSHBUTTON  "Done", IDC_TODO_DONE_BUTTON, 8, 278, 50, 14
     PUSHBUTTON  "Delete", IDC_TODO_DELETE_BUTTON, 62, 278, 50, 14
-    PUSHBUTTON  "Pin", IDC_TODO_PIN_BUTTON, 116, 278, 50, 14
-    PUSHBUTTON  "Close", IDCANCEL, 412, 278, 50, 14
+    PUSHBUTTON  "Sync now", IDC_TODO_SYNC_NOW_BTN, 120, 278, 70, 14
+    PUSHBUTTON  "Settings...", IDC_TODO_SETTINGS_BTN, 194, 278, 64, 14
+    LTEXT       "Board:", CLOCK_IDC_STATIC, 8, 304, 28, 10
+    COMBOBOX    IDC_TODO_BOARD_SEL, 38, 300, 104, 90, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON  "New", IDC_TODO_BOARD_NEW, 148, 299, 34, 13
+    PUSHBUTTON  "Rename", IDC_TODO_BOARD_RENAME, 186, 299, 46, 13
+    PUSHBUTTON  "Del", IDC_TODO_BOARD_DEL, 236, 299, 30, 13
+    PUSHBUTTON  "Sticky", IDC_TODO_BOARD_SHOW, 270, 299, 50, 13
+    PUSHBUTTON  "Close", IDCANCEL, 412, 299, 50, 14
 END
 
 IDD_TODO_SETTINGS_DIALOG DIALOGEX 0, 0, 300, 232

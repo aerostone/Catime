@@ -39,7 +39,6 @@ static BOOL FileMtime(const char *path, long long *out) {
 }
 
 static void CursorPath(char *out, size_t cap) {
-    extern const char *TodoStore_TxtPath(void);
     const char *txt = TodoStore_TxtPath();
     if (!txt || !txt[0]) {
         if (cap) out[0] = '\0';
@@ -71,7 +70,6 @@ static void WriteCursor(long long v) {
 }
 
 static void AppendConflict(const TaskSyncItem *srv) {
-    extern const char *TodoStore_TxtPath(void);
     const char *txt = TodoStore_TxtPath();
     if (!txt || !txt[0] || !srv) return;
     SYSTEMTIME st;
@@ -167,7 +165,6 @@ static void ApplyPulled(const TaskSyncItem *srv) {
 /* Entry called from DoPoll with server+token snapshot. */
 void TodoSyncMerge_Run(const char *server, const char *token) {
     if (!server || !server[0] || !token || !token[0]) return;
-    extern const char *TodoStore_TxtPath(void);
     const char *txt = TodoStore_TxtPath();
     if (!txt || !txt[0]) return;
 

@@ -65,6 +65,14 @@ void InitializePomodoro(void);
 void ResetPomodoroState(void);
 
 /**
+ * @brief TRUE while the continuous pomodoro phase is running
+ *
+ * @details Used by sticky-board surfaces to display remaining time
+ * without touching timer internals.
+ */
+BOOL TimerEvents_IsActivePomodoroTimer(void);
+
+/**
  * @brief Arm a one-time system timeout action selected through trusted UI.
  *
  * @details Shutdown/restart/sleep are dangerous and are intentionally not

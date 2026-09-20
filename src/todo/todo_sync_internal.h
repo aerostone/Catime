@@ -72,4 +72,7 @@ BOOL TodoSyncHttp_Patch(const char *url, const char *bearer, const char *bodyJso
 char *TodoSyncHttp_PostResp(const char *url, const char *bearer,
                             const char *bodyJson);
 
+/* todo_sync_merge.c: one pull+push round against the server. */
+void TodoSyncMerge_Run(const char *url, const char *token);
+
 #endif /* CATIME_TODO_SYNC_INTERNAL_H */

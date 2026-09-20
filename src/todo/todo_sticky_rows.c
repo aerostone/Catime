@@ -1,35 +1,46 @@
 /**
  * @file todo_sticky_rows.c
- * @brief Sticky expanded rows: row-index -> task-id map for id-keyed menu.
+ * @brief Row map of a board card: visible row index -> task id.
  *
- * Single-task sticky: row 0 = the bound task.
- * Rows are rebuilt on every paint (order = store snapshot order).
- * Hit test: body line height 20px starting at BAR_H+30.
+ * Rows are rebuilt from TodoBoard_Tasks on every query, so the mapping
+ * can never drift from what was painted (same filter, same order).
  */
 #include <string.h>
 
+#include "todo_board.h"
 #include "todo_store.h"
 
-#include "todo_sticky_rows.h"
+#include "todo_sticky_pomo.h"
 
-#define STICKY_ROW_H 20
-#define STICKY_BODY_TOP 56
+#include "todo_stickies_slot.h"
 
-int TodoStickyRow_Build(const char *taskId, char ids[][TODO_STORE_ID_LEN],
-                        int cap) {
-    if (!ids || cap <= 0) return 0;
-    if (!taskId || !taskId[0]) return 0;
-    /* single-task sticky today: exactly one row */
-    strcpy_s(ids[0], TODO_STORE_ID_LEN, taskId);
-    (void)cap;
+int TodoSticky_LoadBoardTasks(const char *board, TodoTask *out, int cap) {
+    return TodoBoard_Tasks(board, out, cap);
+}
+
+/* Remaining pomodoro seconds when the running pomo is bound to a task on
+ * this board (0 otherwise, so cards without the bound row stay clean). */
+int TodoSticky_PomoRemainingFor(const char *board) {
+    const char *pid = TodoStickyPomo_TaskId();
+    if (!pid || !pid[0]) return 0;
+    TodoTask tasks[TODO_STORE_MAX_TASKS];
+    int n = TodoSticky_LoadBoardTasks(board, tasks, TODO_STORE_MAX_TASKS);
+    for (int i = 0; i < n; i++) {
+        if (strcmp(tasks[i].id, pid) == 0) return TodoStickyPomo_Remaining();
+    }
+    return 0;
+}
+
+int TodoSticky_RowCount(const char *board) {
+    return TodoBoard_OpenCount(board);
+}
+
+int TodoSticky_RowIdAt(const char *board, int row, char *out, size_t cap) {
+    if (out && cap) out[0] = '\0';
+    if (!board || !board[0] || row < 0 || !out || cap == 0) return 0;
+    TodoTask tasks[TODO_STORE_MAX_TASKS];
+    int n = TodoBoard_Tasks(board, tasks, TODO_STORE_MAX_TASKS);
+    if (row >= n) return 0;
+    strcpy_s(out, cap, tasks[row].id);
     return 1;
-}
-
-int TodoStickyRow_Hit(int y) {
-    int r = (y - STICKY_BODY_TOP) / STICKY_ROW_H;
-    return r < 0 ? -1 : r;
-}
-
-int TodoStickyRow_Top(int row) {
-    return STICKY_BODY_TOP + row * STICKY_ROW_H;
 }

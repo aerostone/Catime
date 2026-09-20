@@ -1,91 +1,130 @@
 /**
  * @file todo_stickies_lifecycle.c
- * @brief Sticky window lifecycle: hide/show-all/restore/forget/visible.
+ * @brief Sticky board lifecycle: slot table, show/hide, restore, topmost.
  *
- * Operates on the slot table in todo_stickies_window.c through
- * todo_stickies_slot.h accessors (no cross-TU static access).
+ * One card per board. Visibility is persisted per board (todo.ini
+ * [Board NAME] Visible=1) so boards come back on the next launch.
  */
 #include <string.h>
+#include <windows.h>
 
+#include "todo_board.h"
 #include "todo_stickies.h"
-#include "todo_store.h"
+
 #include "todo_stickies_slot.h"
 
-void TodoStickies_Hide(const char *taskId) {
-    StickyWin *sw = TodoSticky_SlotById(taskId);
+static StickyWin s_wins[STICKY_SLOT_MAX_WIN];
+
+int TodoSticky_SlotCount(void) { return STICKY_SLOT_MAX_WIN; }
+
+StickyWin *TodoSticky_SlotAt(int index) {
+    if (index < 0 || index >= STICKY_SLOT_MAX_WIN) return NULL;
+    return &s_wins[index];
+}
+
+StickyWin *TodoSticky_SlotByBoard(const char *board) {
+    if (!board || !board[0]) return NULL;
+    for (int i = 0; i < STICKY_SLOT_MAX_WIN; i++) {
+        if (s_wins[i].used && strcmp(s_wins[i].board, board) == 0)
+            return &s_wins[i];
+    }
+    return NULL;
+}
+
+StickyWin *TodoSticky_SlotByHwnd(HWND hwnd) {
+    if (!hwnd) return NULL;
+    for (int i = 0; i < STICKY_SLOT_MAX_WIN; i++) {
+        if (s_wins[i].used && s_wins[i].hwnd == hwnd) return &s_wins[i];
+    }
+    return NULL;
+}
+
+StickyWin *TodoSticky_SlotAlloc(void) {
+    for (int i = 0; i < STICKY_SLOT_MAX_WIN; i++) {
+        if (!s_wins[i].used) return &s_wins[i];
+    }
+    return NULL;
+}
+
+BOOL TodoStickies_IsVisible(const char *board) {
+    return TodoSticky_SlotByBoard(board) != NULL;
+}
+
+void TodoStickies_HideBoard(const char *board) {
+    StickyWin *sw = TodoSticky_SlotByBoard(board);
     if (!sw) return;
-    ShowWindow(sw->hwnd, SW_HIDE);
+    TodoBoard_SetVisible(board, FALSE);
+    if (sw->hwnd) DestroyWindow(sw->hwnd); /* WM_DESTROY frees the slot */
 }
 
 void TodoStickies_HideAll(void) {
-    for (int i = 0; i < TodoSticky_SlotCount(); i++) {
-        StickyWin *sw = TodoSticky_SlotAt(i);
-        if (sw && sw->used && sw->hwnd)
-            ShowWindow(sw->hwnd, SW_HIDE);
+    for (int i = 0; i < STICKY_SLOT_MAX_WIN; i++) {
+        StickyWin *sw = &s_wins[i];
+        if (!sw->used) continue;
+        TodoBoard_SetVisible(sw->board, FALSE);
+        if (sw->hwnd) DestroyWindow(sw->hwnd);
+        else sw->used = FALSE;
+    }
+}
+
+void TodoStickies_ToggleBoard(const char *board) {
+    if (!board || !board[0]) return;
+    if (TodoStickies_IsVisible(board)) TodoStickies_HideBoard(board);
+    else TodoStickies_ShowBoard(board);
+}
+
+/* Show a card for every board (tray "show all stickies"). */
+void TodoStickies_ShowAll(void) {
+    int n = TodoBoard_Count();
+    for (int i = 0; i < n; i++) {
+        const char *name = TodoBoard_NameAt(i);
+        if (name[0]) TodoStickies_ShowBoard(name);
     }
 }
 
 void TodoStickies_RestoreAll(void) {
-    TodoFilter f;
-    TodoTask buf[TODO_STORE_MAX_TASKS];
-    TodoFilter_InitDefault(&f);
-    int n = TodoStore_Query(&f, buf, TODO_STORE_MAX_TASKS);
+    int n = TodoBoard_Count();
     for (int i = 0; i < n; i++) {
-        if (buf[i].done) continue;
-        if (TodoSticky_IsPinned(buf[i].id))
-            TodoStickies_Show(buf[i].id);
+        const char *name = TodoBoard_NameAt(i);
+        if (!name[0]) continue;
+        if (TodoBoard_Visible(name)) TodoStickies_ShowBoard(name);
     }
 }
 
-void TodoStickies_Forget(const char *taskId) {
-    StickyWin *sw = TodoSticky_SlotById(taskId);
-    if (!sw) return;
-    if (sw->hwnd) DestroyWindow(sw->hwnd);
+void TodoStickies_RefreshAll(void) {
+    for (int i = 0; i < STICKY_SLOT_MAX_WIN; i++) {
+        if (s_wins[i].used && s_wins[i].hwnd)
+            InvalidateRect(s_wins[i].hwnd, NULL, FALSE);
+    }
 }
 
-/* Opacity 30..100 (percent). Stored in [Sticky] Opacity=, default 100. */
-int TodoSticky_Opacity(void) {
-    const char *ini = TodoStore_IniPath();
-    if (!ini || !ini[0]) return 100;
-    int v = GetPrivateProfileIntA("Sticky", "Opacity", 100, ini);
-    if (v < 30) v = 30;
-    if (v > 100) v = 100;
-    return v;
+BOOL TodoSticky_TopmostGlobal(void) { return TodoBoard_TopmostGlobal(); }
+
+void TodoSticky_SetTopmostGlobal(BOOL topmost) {
+    TodoBoard_SetTopmostGlobal(topmost);
 }
 
-void TodoSticky_SetOpacity(int pct) {
-    const char *ini = TodoStore_IniPath();
-    if (!ini || !ini[0]) return;
-    if (pct < 30) pct = 30;
-    if (pct > 100) pct = 100;
-    char v[8];
-    _snprintf_s(v, sizeof(v), _TRUNCATE, "%d", pct);
-    WritePrivateProfileStringA("Sticky", "Opacity", v, ini);
-}
+int TodoSticky_Opacity(void) { return TodoBoard_Opacity(); }
 
-/* Apply stored opacity to one window (layered alpha). */
+void TodoSticky_SetOpacity(int pct) { TodoBoard_SetOpacity(pct); }
+
 void TodoSticky_ApplyOpacity(HWND hwnd) {
     if (!hwnd) return;
-    BYTE a = (BYTE)(TodoSticky_Opacity() * 255 / 100);
-    SetLayeredWindowAttributes(hwnd, 0, a, LWA_ALPHA);
+    int pct = TodoSticky_Opacity();
+    SetWindowLongPtrW(hwnd, GWL_EXSTYLE,
+                      GetWindowLongPtrW(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
+    SetLayeredWindowAttributes(hwnd, 0, (BYTE)(255 * pct / 100), LWA_ALPHA);
 }
 
-/* Re-apply effective topmost to all windows honoring global default
- * (per-card override windows are left untouched). */
+/* Re-applies z-order + opacity after a settings change. Cards with an
+ * explicit per-board override keep their own choice. */
 void TodoSticky_RetopAll(void) {
-    for (int i = 0; i < TodoSticky_SlotCount(); i++) {
-        StickyWin *sw = TodoSticky_SlotAt(i);
-        if (!sw || !sw->used || !sw->hwnd) continue;
-        TodoSticky_ApplyOpacity(sw->hwnd);
-        if (TodoSticky_TopmostOverride(sw->taskId) >= 0) continue;
-        BOOL top = TodoSticky_TopmostGlobal();
-        SetWindowPos(sw->hwnd, top ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0,
-                     0, 0, SWP_NOMOVE | SWP_NOSIZE);
+    for (int i = 0; i < STICKY_SLOT_MAX_WIN; i++) {
+        if (!s_wins[i].used || !s_wins[i].hwnd) continue;
+        if (TodoBoard_TopmostOverride(s_wins[i].board) != -1) continue;
+        BOOL top = TodoBoard_TopmostFor(s_wins[i].board);
+        SetWindowPos(s_wins[i].hwnd, top ? HWND_TOPMOST : HWND_NOTOPMOST,
+                     0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        TodoSticky_ApplyOpacity(s_wins[i].hwnd);
     }
-}
-
-BOOL TodoStickies_IsVisible(const char *taskId) {
-    StickyWin *sw = TodoSticky_SlotById(taskId);
-    if (!sw || !sw->hwnd) return FALSE;
-    return IsWindowVisible(sw->hwnd);
 }

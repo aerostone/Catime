@@ -16,6 +16,9 @@ CRITICAL_SECTION g_todoSyncLock;
 BOOL g_todoSyncLockInit = FALSE;
 TodoCache g_todoSyncCache;
 HWND g_todoSyncHwnd = NULL;
+
+/* Main-window handle for dialogs/child windows owned by TODO features. */
+HWND TodoSync_MainHwnd(void) { return g_todoSyncHwnd; }
 wchar_t g_todoSyncIniPath[MAX_PATH] = L"";
 char g_todoSyncServer[TODO_URL_LEN] = "";
 char g_todoSyncToken[TODO_TOKEN_LEN] = "";
@@ -78,7 +81,6 @@ static void DoPoll(void) {
     }
     if (g_todoSyncHwnd) InvalidateRect(g_todoSyncHwnd, NULL, TRUE);
     /* entry-level bidirectional merge (pull changed_since + push dirty) */
-    void TodoSyncMerge_Run(const char *server, const char *token);
     TodoSyncMerge_Run(server, token);
 }
 

@@ -11,13 +11,14 @@
 #include "../../resource/resource.h"
 #include "language.h"
 #include "todo/todo_store.h"
-#include "todo/todo_stickies.h"
 #include "todo/todo_sync.h"
 
 #include "dialog/dialog_todo_list_state.h"
 #include "todo/todo_conflict.h"
 
 #include "dialog/dialog_todo_parts.h"
+#include "todo/todo_board.h"
+#include "todo/todo_stickies.h"
 void TodoDlg_RefreshList(HWND hdlg);
 
 
@@ -48,7 +49,18 @@ void TodoDlg_OnAdd(HWND hdlg) {
     if (imp == 1) level = TODO_IMPORTANCE_LOW;
     else if (imp == 2) level = TODO_IMPORTANCE_MEDIUM;
     else if (imp == 3) level = TODO_IMPORTANCE_HIGH;
-    if (!TodoStore_Add(title, level, due)) {
+    char board[TODO_STORE_BOARD_LEN * 2];
+    TodoDlg_GetBoard(hdlg, board, sizeof(board));
+    if (strcmp(board, TODO_BOARD_SYNC) == 0) {
+        /* the sync board is pull-only: local tasks go to the default board */
+        strcpy_s(board, sizeof(board), TODO_BOARD_DEFAULT);
+        MessageBoxW(hdlg,
+            GetLocalizedString(
+                L"\u540c\u6b65\u4fbf\u7b3e\u53ea\u63a5\u6536\u670d\u52a1\u5668\u4efb\u52a1\uff0c\u5df2\u6539\u4e3a\u6dfb\u52a0\u5230\u672c\u5730\u4fbf\u7b3e",
+                L"The sync board only receives server tasks; added locally"),
+            L"TODO", MB_ICONINFORMATION);
+    }
+    if (!TodoStore_AddTo(title, level, due, board)) {
         MessageBoxW(hdlg,
             GetLocalizedString(L"\u6dfb\u52a0\u5931\u8d25\uff08\u65e5\u671f\u683c\u5f0f YYYY-MM-DD\uff1f\uff09",
                                L"Add failed (date format YYYY-MM-DD?)"),
@@ -56,6 +68,7 @@ void TodoDlg_OnAdd(HWND hdlg) {
         return;
     }
     SetDlgItemTextW(hdlg, IDC_TODO_NEW_EDIT, L"");
+    TodoStickies_RefreshAll();
     TodoDlg_RefreshList(hdlg);
 }
 
@@ -65,9 +78,8 @@ void TodoDlg_OnToggleDone(HWND hdlg) {
     if (t->source == TODO_SOURCE_LOCAL ||
         (t->id[0] == 'C' && t->id[1] == ':')) {
         TodoStore_SetDone(t->id, !t->done);
-    } else {
-        /* V: view-only: nothing actionable */
     }
+    TodoStickies_RefreshAll();
     TodoDlg_RefreshList(hdlg);
 }
 
@@ -85,8 +97,8 @@ void TodoDlg_OnDelete(HWND hdlg) {
         if (rc != IDOK) return;
         char id[TODO_STORE_ID_LEN];
         strcpy_s(id, sizeof(id), t->id);
-        TodoStickies_Forget(id);
-        TodoStore_Remove(id);
+            TodoStore_Remove(id);
+        TodoStickies_RefreshAll();
         TodoDlg_RefreshList(hdlg);
     } else {
         MessageBoxW(hdlg,
@@ -94,21 +106,6 @@ void TodoDlg_OnDelete(HWND hdlg) {
                                L"This row is a read-only view"),
             GetLocalizedString(L"TODO", L"TODO"), MB_ICONINFORMATION);
     }
-}
-
-void TodoDlg_OnPin(HWND hdlg) {
-    TodoTask *t = SelectedTask();
-    if (!t) return;
-    if (t->source != TODO_SOURCE_LOCAL) {
-        MessageBoxW(hdlg,
-            GetLocalizedString(L"\u53ea\u6709\u672c\u5730\u4efb\u52a1\u53ef\u4ee5\u7f6e\u9876\u4e3a\u4fbf\u7b3e",
-                               L"Only local tasks can be pinned as stickies"),
-            GetLocalizedString(L"TODO", L"TODO"), MB_ICONINFORMATION);
-        return;
-    }
-    BOOL pinned = TodoSticky_IsPinned(t->id);
-    TodoSticky_SetPinned(t->id, !pinned);
-    TodoDlg_RefreshList(hdlg);
 }
 
 void TodoDlg_OnSelect(HWND hdlg, int listIndex) {

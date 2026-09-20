@@ -84,6 +84,7 @@ static void RefreshEnableGate(HWND hdlg) {
     EnableWindow(GetDlgItem(hdlg, IDC_TODO_SYNC_ENABLE), has);
     BOOL en = IsDlgButtonChecked(hdlg, IDC_TODO_SYNC_ENABLE) == BST_CHECKED;
     EnableWindow(GetDlgItem(hdlg, IDC_TODO_SETTINGS_SYNC_BTN), has && en);
+    EnableWindow(GetDlgItem(hdlg, IDC_TODO_SYNC_POLL), has);
     if (!has && en)
         CheckDlgButton(hdlg, IDC_TODO_SYNC_ENABLE, BST_UNCHECKED);
 }

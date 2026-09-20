@@ -22,7 +22,7 @@ void TodoTxt_FormatLine(const TodoTask *t, char *dst, size_t cap) {
     else if (t->importance == TODO_IMPORTANCE_MEDIUM) prio = "(B) ";
     else if (t->importance == TODO_IMPORTANCE_LOW) prio = "(C) ";
     /* tail extensions (spec order: due id pin upd srv) */
-    char tail[192] = "";
+    char tail[224] = "";
     _snprintf_s(tail, sizeof(tail), _TRUNCATE, "%s%s%s%s%s%s",
                 t->dueDate[0] ? " due:" : "", t->dueDate,
                 t->id[0] ? " id:" : "", t->id,
@@ -36,6 +36,10 @@ void TodoTxt_FormatLine(const TodoTask *t, char *dst, size_t cap) {
     if (t->serverId[0]) {
         strcat_s(tail, sizeof(tail), " srv:");
         strcat_s(tail, sizeof(tail), t->serverId);
+    }
+    if (t->board[0]) {
+        strcat_s(tail, sizeof(tail), " b:");
+        strcat_s(tail, sizeof(tail), t->board);
     }
     if (t->done) {
         if (t->doneAt[0])

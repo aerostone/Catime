@@ -2,6 +2,8 @@
  * @file todo_sync_status.c
  * @brief Sync connection snapshot + conflict counter for UI surfaces.
  */
+#include "todo_conflict.h"
+#include "todo_store.h"
 #include "todo_sync_status.h"
 #include "language.h"
 
@@ -52,7 +54,6 @@ TodoSyncState TodoSyncStatus_Get(char *stampOut, size_t stampCap) {
 }
 
 int TodoSyncStatus_ConflictCount(void) {
-    extern int TodoConflict_Count(void);
     return TodoConflict_Count();
 }
 
@@ -85,7 +86,6 @@ void TodoSyncStatus_Label(wchar_t *out, size_t cap) {
 }
 
 void TodoSyncStatus_OpenTodoDir(HWND hwnd) {
-    extern const char *TodoStore_TxtPath(void);
     const char *txt = TodoStore_TxtPath();
     if (!txt || !txt[0]) return;
     char dir[MAX_PATH] = "";

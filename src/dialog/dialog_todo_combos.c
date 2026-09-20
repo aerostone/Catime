@@ -11,10 +11,6 @@
 #include "language.h"
 #include "dialog/dialog_todo_parts.h"
 
-#ifndef EM_SETCUEBANNER_W
-#define EM_SETCUEBANNER_W (0x1501)
-#endif
-
 void TodoDlg_InitCombos(HWND hdlg) {
 
     HWND scope = GetDlgItem(hdlg, IDC_TODO_FILTER_DUE_SCOPE);
@@ -24,6 +20,8 @@ void TodoDlg_InitCombos(HWND hdlg) {
         (LPARAM)GetLocalizedString(L"\u6708", L"Month"));
     SendMessageW(scope, CB_ADDSTRING, 0,
         (LPARAM)GetLocalizedString(L"\u81ea\u5b9a\u4e49", L"Custom"));
+    SendMessageW(scope, CB_ADDSTRING, 0,
+        (LPARAM)GetLocalizedString(L"\u5168\u90e8", L"All"));
     SendMessageW(scope, CB_SETCURSEL, 0, 0);
     HWND src = GetDlgItem(hdlg, IDC_TODO_FILTER_SOURCE);
     SendMessageW(src, CB_ADDSTRING, 0,
@@ -36,8 +34,8 @@ void TodoDlg_InitCombos(HWND hdlg) {
     HWND imp = GetDlgItem(hdlg, IDC_TODO_FILTER_IMPORTANCE);
     SendMessageW(imp, CB_ADDSTRING, 0,
         (LPARAM)GetLocalizedString(L"\u4efb\u610f", L"Any"));
-    SendMessageW(imp, CB_ADDSTRING, 0, (LPARAM)L"Low+");
-    SendMessageW(imp, CB_ADDSTRING, 0, (LPARAM)L"Medium+");
+    SendMessageW(imp, CB_ADDSTRING, 0, (LPARAM)GetLocalizedString(L"\u4f4e+", L"Low+"));
+    SendMessageW(imp, CB_ADDSTRING, 0, (LPARAM)GetLocalizedString(L"\u4e2d+", L"Medium+"));
     SendMessageW(imp, CB_ADDSTRING, 0,
         (LPARAM)GetLocalizedString(L"\u9ad8", L"High"));
     SendMessageW(imp, CB_SETCURSEL, 0, 0);
@@ -65,10 +63,11 @@ void TodoDlg_InitCombos(HWND hdlg) {
                    GetLocalizedString(L"\u6dfb\u52a0", L"Add"));
     SetWindowTextW(GetDlgItem(hdlg, IDC_TODO_DONE_BUTTON),
                    GetLocalizedString(L"\u5b8c\u6210", L"Done"));
+    SetWindowTextW(GetDlgItem(hdlg, IDC_TODO_BOARD_SHOW),
+                   GetLocalizedString(L"\u663e\u793a\u4fbf\u7b7e",
+                                      L"Show sticky"));
     SetWindowTextW(GetDlgItem(hdlg, IDC_TODO_DELETE_BUTTON),
                    GetLocalizedString(L"\u5220\u9664", L"Delete"));
-    SetWindowTextW(GetDlgItem(hdlg, IDC_TODO_PIN_BUTTON),
-                   GetLocalizedString(L"\u4fbf\u7b3e", L"Pin"));
     SetWindowTextW(GetDlgItem(hdlg, IDCANCEL),
                    GetLocalizedString(L"\u5173\u95ed", L"Close"));
 }

@@ -103,6 +103,12 @@ static void LoadLocked(void) {
     s_nextId = 1;
     if (s_txtPath[0]) {
         s_count = TodoTxt_LoadFile(s_txtPath, s_tasks, TODO_STORE_MAX_TASKS);
+        /* a task without b:NAME belongs to the default board */
+        for (int i = 0; i < s_count; i++) {
+            if (!s_tasks[i].board[0])
+                strcpy_s(s_tasks[i].board, sizeof(s_tasks[i].board),
+                         TODO_BOARD_DEFAULT);
+        }
         /* recover id counter from max L-number */
         for (int i = 0; i < s_count; i++) {
             if (s_tasks[i].id[0] == 'L') {
@@ -154,6 +160,11 @@ static long long StampNow(void) {
 }
 
 BOOL TodoStore_Add(const char *title, TodoImportance imp, const char *dueDate) {
+    return TodoStore_AddTo(title, imp, dueDate, TODO_BOARD_DEFAULT);
+}
+
+BOOL TodoStore_AddTo(const char *title, TodoImportance imp, const char *dueDate,
+                     const char *board) {
     if (!title || !title[0]) return FALSE;
     char clean[TODO_STORE_TITLE_LEN];
     TodoNormalize_Copy(title, clean, sizeof(clean));
@@ -171,6 +182,8 @@ BOOL TodoStore_Add(const char *title, TodoImportance imp, const char *dueDate) {
         t.importance = imp;
         t.done = FALSE;
         if (dueDate) strcpy_s(t.dueDate, sizeof(t.dueDate), dueDate);
+        if (board && board[0] && strlen(board) < TODO_STORE_BOARD_LEN)
+            strcpy_s(t.board, sizeof(t.board), board);
         TodayStr(t.createdAt, sizeof(t.createdAt));
         t.updatedAt = StampNow();
         s_tasks[s_count++] = t;
@@ -250,26 +263,10 @@ BOOL TodoStore_SetDueDate(const char *id, const char *dueDate) {
     return ok;
 }
 
-int TodoStore_LocalCount(void) {
-    TodoStore_Lock();
-    int n = s_count;
-    TodoStore_Unlock();
-    return n;
-}
-
 void TodoStore_Reload(void) {
     TodoStore_Lock();
     if (s_txtPath[0] || s_iniPath[0]) LoadLocked();
     TodoStore_Unlock();
-}
-
-int TodoStore_SnapshotLocal(TodoTask *out, int outCap) {
-    if (!out || outCap <= 0) return 0;
-    TodoStore_Lock();
-    int w = s_count < outCap ? s_count : outCap;
-    for (int i = 0; i < w; i++) out[i] = s_tasks[i];
-    TodoStore_Unlock();
-    return w;
 }
 
 void TodoStore_Save(void) {

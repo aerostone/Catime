@@ -14,6 +14,8 @@
 #include "log.h"
 #include "markdown/markdown_interactive.h"
 #include "notification.h"
+#include "todo/todo_board.h"
+#include "todo/todo_stickies.h"
 #include "todo/todo_store.h"
 #include "todo/todo_sync.h"
 #include "plugin/plugin_data.h"
@@ -24,6 +26,8 @@
 #include "window/window_visual_effects.h"
 
 void CleanupResources(void) {
+    TodoStickies_HideAll();
+    TodoBoard_Shutdown();
     TodoStore_Shutdown();
     TodoSync_Shutdown();
     CleanupMarkdownInteractive();

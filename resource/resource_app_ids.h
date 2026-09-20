@@ -195,6 +195,7 @@
 #define CLOCK_IDM_TODO_NEW_STICKY 147      /**< New task + pin as sticky */
 #define CLOCK_IDM_TODO_SETTINGS 148        /**< TODO sync settings dialog */
 #define CLOCK_IDM_TODO_SYNC_NOW 149        /**< Force one sync poll now */
+#define CLOCK_IDM_TODO_SHOW_ALL 150        /**< Show all sticky boards */
 
 /** @brief Basic menu identifiers */
 #define CLOCK_IDM_CUSTOM_COUNTDOWN 101       /**< Custom countdown input */

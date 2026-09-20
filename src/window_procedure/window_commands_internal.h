@@ -87,6 +87,7 @@ LRESULT CmdVlaina(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT CmdBongoCat(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT CmdFeedback(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT CmdTodoList(HWND hwnd, WPARAM wp, LPARAM lp);
+LRESULT CmdTodoShowAll(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT CmdTodoNew(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT CmdTodoNewSticky(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT CmdTodoSettings(HWND hwnd, WPARAM wp, LPARAM lp);

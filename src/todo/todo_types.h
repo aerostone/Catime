@@ -22,6 +22,9 @@ extern "C" {
 #define TODO_STORE_DATE_LEN 16 /* YYYY-MM-DD, empty = no date */
 #define TODO_STORE_NOTES_LEN 512
 #define TODO_STORE_UUID_LEN 64
+#define TODO_STORE_BOARD_LEN 32 /* sticky board name, "" = default board */
+#define TODO_BOARD_DEFAULT "\u672c\u5730" /* "local" */
+#define TODO_BOARD_SYNC "tweek"
 
 /* Importance: 0 none, 1 low, 2 medium, 3 high. */
 typedef enum {
@@ -51,13 +54,15 @@ typedef struct {
     long long updatedAt;            /* local mutation stamp (unix sec) */
     char notes[TODO_STORE_NOTES_LEN]; /* reserved: pomo binding note */
     char serverId[TODO_STORE_UUID_LEN]; /* tweek uuid (srv:xxx in txt) */
+    char board[TODO_STORE_BOARD_LEN]; /* sticky board (b:xxx), "" = default */
 } TodoTask;
 
 /* Due date scope preset for the list dialog. */
 typedef enum {
     TODO_DUE_SCOPE_WEEK = 0,   /* default: current week Mon..Sun */
     TODO_DUE_SCOPE_MONTH = 1,  /* current calendar month */
-    TODO_DUE_SCOPE_CUSTOM = 2  /* manual fromDate/toDate range */
+    TODO_DUE_SCOPE_CUSTOM = 2, /* manual fromDate/toDate range */
+    TODO_DUE_SCOPE_ALL = 3     /* no date window (sticky boards) */
 } TodoDueScope;
 
 /* Filter for list dialog: each field empty/negative = no constraint. */
@@ -72,6 +77,7 @@ typedef struct {
     char doneFrom[TODO_STORE_DATE_LEN]; /* doneAt >= from, "" = any */
     char doneTo[TODO_STORE_DATE_LEN];   /* doneAt <= to, "" = any */
     char keyword[TODO_STORE_TITLE_LEN]; /* substring in title, "" = any */
+    char board[TODO_STORE_BOARD_LEN]; /* board name, "" = any board */
 } TodoFilter;
 
 void TodoFilter_InitDefault(TodoFilter *f);
