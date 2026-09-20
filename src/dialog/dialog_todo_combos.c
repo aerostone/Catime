@@ -5,6 +5,7 @@
  * Split from dialog_todo_list.c to respect the 300-line gate.
  */
 #include <windows.h>
+#include <commctrl.h> /* EM_SETCUEBANNER for dialog cue banners */
 #include <stdio.h>
 
 #include "../../resource/resource.h"

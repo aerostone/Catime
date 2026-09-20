@@ -20,11 +20,10 @@
 
 #include "todo_stickies_slot.h"
 
-#define STICKY_CLASS L"CatimeStickyClass"
 #define STICKY_TIMER_POMO 9201
 #define STICKY_TIMER_KW 9202 /* keyword persistence debounce */
 
-static BOOL s_classReg = FALSE;
+BOOL g_stickyClassReg = FALSE;
 
 
 void TodoSticky_Repaint(StickyWin *sw) {
@@ -88,7 +87,7 @@ static void HitTitleBar(StickyWin *sw, int x, int y) {
     SetCapture(sw->hwnd);
 }
 
-static LRESULT CALLBACK StickyProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
+LRESULT CALLBACK StickyProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     StickyWin *sw = TodoSticky_SlotByHwnd(hwnd);
     switch (msg) {
     case WM_PAINT: {

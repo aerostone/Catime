@@ -37,7 +37,7 @@ void TodoSticky_LayoutChildren(StickyWin *sw) {
 }
 
 static BOOL EnsureClass(void) {
-    if (s_classReg) return TRUE;
+    if (g_stickyClassReg) return TRUE;
     WNDCLASSEXW wc;
     memset(&wc, 0, sizeof(wc));
     wc.cbSize = sizeof(wc);
@@ -49,7 +49,7 @@ static BOOL EnsureClass(void) {
     wc.style = CS_DBLCLKS;
     if (!RegisterClassExW(&wc) && GetLastError() != ERROR_CLASS_ALREADY_EXISTS)
         return FALSE;
-    s_classReg = TRUE;
+    g_stickyClassReg = TRUE;
     return TRUE;
 }
 

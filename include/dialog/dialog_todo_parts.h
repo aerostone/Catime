@@ -9,7 +9,6 @@
 #define CATIME_DIALOG_TODO_PARTS_H
 
 #include <windows.h>
-#include <commctrl.h> /* EM_SETCUEBANNER for dialog cue banners */
 
 #include "todo/todo_store.h"
 #include "dialog/dialog_todo_list_state.h"

@@ -220,7 +220,7 @@ BOOL TodoDlg_BoardCommand(HWND hdlg, WORD id, WORD code) {
     case IDC_TODO_BOARD_SHOW: ToggleBoardSticky(hdlg); return TRUE;
     case IDC_TODO_BOARD_SEL:
         /* CBN_SELCHANGE only: ignore paint-time focus notifications */
-        if (HIWORD(wp) != CBN_SELCHANGE) return TRUE;
+        if (code != CBN_SELCHANGE) return TRUE;
         TodoDlg_SyncStickyButton(hdlg);
         TodoDlg_SyncScopeCombo(hdlg);
         TodoDlg_RefreshList(hdlg);

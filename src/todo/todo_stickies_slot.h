@@ -9,6 +9,7 @@
 #define CATIME_TODO_STICKIES_SLOT_H
 
 #include <windows.h>
+#include <commctrl.h> /* WC_EDITW for the keyword filter child edit */
 
 #include "todo/todo_types.h"
 
@@ -49,7 +50,10 @@ StickyWin *TodoSticky_SlotByBoard(const char *board);
 StickyWin *TodoSticky_SlotByHwnd(HWND hwnd);
 StickyWin *TodoSticky_SlotAlloc(void);
 
-/* todo_stickies_window.c */
+/* todo_stickies_window.c: class name + WndProc + runtime flag. */
+#define STICKY_CLASS L"CatimeStickyClass"
+extern BOOL g_stickyClassReg;
+LRESULT CALLBACK StickyProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 void TodoSticky_SetCollapsedUI(HWND hwnd, StickyWin *sw, BOOL collapsed);
 void TodoSticky_Repaint(StickyWin *sw);
 void TodoSticky_LayoutChildren(StickyWin *sw);
