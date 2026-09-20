@@ -23,6 +23,36 @@
 #include "todo/todo_conflict.h"
 #include "todo/todo_ui_debug.h"
 
+#define TODO_OPACITY_STEPS 8
+
+/* index 0..7 => 100,90,...,30 percent */
+static int OpacityForIndex(int idx) {
+    if (idx < 0) idx = 0;
+    if (idx >= TODO_OPACITY_STEPS) idx = TODO_OPACITY_STEPS - 1;
+    return 100 - idx * 10;
+}
+
+static int IndexForOpacity(int pct) {
+    int idx = (100 - pct) / 10;
+    if (idx < 0) idx = 0;
+    if (idx >= TODO_OPACITY_STEPS) idx = TODO_OPACITY_STEPS - 1;
+    return idx;
+}
+
+static void FillOpacityCombo(HWND hdlg) {
+    HWND cb = GetDlgItem(hdlg, IDC_TODO_STICKY_OPACITY);
+    if (!cb) return;
+    SendMessageW(cb, CB_RESETCONTENT, 0, 0);
+    for (int i = 0; i < TODO_OPACITY_STEPS; i++) {
+        wchar_t lbl[16];
+        _snwprintf_s(lbl, _countof(lbl), _TRUNCATE, L"%d%%",
+                     OpacityForIndex(i));
+        SendMessageW(cb, CB_ADDSTRING, 0, (LPARAM)lbl);
+    }
+    SendMessageW(cb, CB_SETCURSEL,
+                 (WPARAM)IndexForOpacity(TodoSticky_Opacity()), 0);
+}
+
 static void RefreshStatusLine(HWND hdlg) {
     wchar_t st[96];
     TodoSyncStatus_Label(st, _countof(st));
@@ -76,6 +106,7 @@ static void FillFromCurrent(HWND hdlg) {
     RefreshStatusLine(hdlg);
     CheckDlgButton(hdlg, IDC_TODO_STICKY_TOPMOST,
                    TodoSticky_TopmostGlobal() ? BST_CHECKED : BST_UNCHECKED);
+    FillOpacityCombo(hdlg);
 #ifdef CATIME_UI_DEBUG
     CheckDlgButton(hdlg, IDC_TODO_DEBUG_CHECK,
                    TodoUiDebug_Enabled() ? BST_CHECKED : BST_UNCHECKED);
@@ -122,6 +153,17 @@ static BOOL CollectAndSave(HWND hdlg) {
     if (top != TodoSticky_TopmostGlobal()) {
         TodoSticky_SetTopmostGlobal(top);
         TodoSticky_RetopAll();
+    }
+    {
+        HWND cb = GetDlgItem(hdlg, IDC_TODO_STICKY_OPACITY);
+        int idx = cb ? (int)SendMessageW(cb, CB_GETCURSEL, 0, 0) : -1;
+        if (idx >= 0) {
+            int pct = OpacityForIndex(idx);
+            if (pct != TodoSticky_Opacity()) {
+                TodoSticky_SetOpacity(pct);
+                TodoSticky_RetopAll();
+            }
+        }
     }
 #ifdef CATIME_UI_DEBUG
     TodoUiDebug_SetEnabled(

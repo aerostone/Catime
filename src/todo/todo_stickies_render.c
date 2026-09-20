@@ -38,6 +38,32 @@ void TodoSticky_PaintEx(HDC hdc, const RECT *rc, const TodoTask *t,
                         int pomoRemSec) {
     if (!hdc || !rc || !t) return;
     int barH = 32;
+    if (collapsed) {
+        /* dot mode: whole window is one glyph, tinted by peak importance */
+        HBRUSH bd = CreateSolidBrush(TodoSticky_BodyColor());
+        if (bd) { FillRect(hdc, rc, bd); DeleteObject(bd); }
+        SetBkMode(hdc, TRANSPARENT);
+        if (fTitle) SelectObject(hdc, fTitle);
+        wchar_t dot[4];
+        COLORREF col;
+        if (t->done) {
+            wcscpy_s(dot, _countof(dot), L"\u25cb"); /* hollow: done */
+            col = RGB(150, 150, 150);
+        } else {
+            wcscpy_s(dot, _countof(dot), L"\u25cf"); /* filled: open */
+            switch (t->importance) {
+            case TODO_IMPORTANCE_HIGH: col = RGB(198, 40, 40); break;
+            case TODO_IMPORTANCE_MEDIUM: col = RGB(230, 145, 56); break;
+            case TODO_IMPORTANCE_LOW: col = RGB(60, 130, 200); break;
+            default: col = RGB(90, 90, 90); break;
+            }
+        }
+        SetTextColor(hdc, col);
+        RECT dr = *rc;
+        DrawTextW(hdc, dot, -1, &dr,
+                  DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+        return;
+    }
     HBRUSH body = CreateSolidBrush(TodoSticky_BodyColor());
     if (body) {
         FillRect(hdc, rc, body);
@@ -91,7 +117,7 @@ void TodoSticky_PaintEx(HDC hdc, const RECT *rc, const TodoTask *t,
     if (pomoRemSec > 0) {
         /* D1 fix: countdown lives in the body, never over the title. */
         wchar_t pomo[32];
-        _snwprintf_s(pomo, _countof(pomo), _TRUNCATE, L"\u5515 %d:%02d",
+        _snwprintf_s(pomo, _countof(pomo), _TRUNCATE, L"\u756a\u8304 %d:%02d",
                      pomoRemSec / 60, pomoRemSec % 60);
         RECT br0 = *rc;
         br0.top += barH + 6; br0.left += 8; br0.right -= 8;
@@ -100,8 +126,7 @@ void TodoSticky_PaintEx(HDC hdc, const RECT *rc, const TodoTask *t,
         DrawTextW(hdc, pomo, -1, &br0,
                   DT_LEFT | DT_TOP | DT_NOPREFIX | DT_SINGLELINE);
     }
-    /* body: due date line + done state (D4: gesture hint rotates) */
-    static volatile LONG s_hintFlip = 0;
+    /* body: due date line + done state (display-only card). */
     RECT br = *rc;
     br.top += barH + 6 + (pomoRemSec > 0 ? 20 : 0); br.left += 8; br.right -= 8; br.bottom -= 6;
     SetTextColor(hdc, t->done ? RGB(140, 140, 140) : RGB(60, 60, 60));
@@ -113,10 +138,8 @@ void TodoSticky_PaintEx(HDC hdc, const RECT *rc, const TodoTask *t,
                          wd, t->done ? L" · 已完成" : L"");
     } else if (t->done) {
         wcscpy_s(info, _countof(info), L"已完成");
-    } else if ((InterlockedIncrement(&s_hintFlip) / 60) % 2 == 0) {
-        wcscpy_s(info, _countof(info), L"双击编辑内容");
     } else {
-        wcscpy_s(info, _countof(info), L"双击标题栏收起");
+        wcscpy_s(info, _countof(info), L"双击收起·右键番茄");
     }
     DrawTextW(hdc, info, -1, &br, DT_LEFT | DT_TOP | DT_NOPREFIX);
 }

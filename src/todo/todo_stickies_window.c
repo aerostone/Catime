@@ -111,6 +111,11 @@ static LRESULT CALLBACK StickyProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         if (!sw) break;
         int y = GET_Y_LPARAM(lp);
         int x = GET_X_LPARAM(lp);
+        /* Dot mode: the whole square is one "expand" target. */
+        if (sw->collapsed) {
+            TodoSticky_SetCollapsedUI(hwnd, sw, FALSE);
+            return 0;
+        }
         RECT rc;
         GetClientRect(hwnd, &rc);
         /* D2: rightmost 18px hides (= unpin); pin glyph 40..18 toggles.
@@ -168,7 +173,7 @@ static LRESULT CALLBACK StickyProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         }
         return 0;
     case WM_SIZE:
-        if (sw) {
+        if (sw && !sw->collapsed) {
             RECT wr;
             GetWindowRect(hwnd, &wr);
             TodoSticky_SaveGeom(sw->taskId, wr.left, wr.top,
@@ -243,17 +248,17 @@ void TodoStickies_Show(const char *taskId) {
                             DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
                             CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
                             DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
-    DWORD ex = WS_EX_TOOLWINDOW | (TodoSticky_TopmostFor(taskId) ? WS_EX_TOPMOST : 0);
+    DWORD ex = WS_EX_TOOLWINDOW | WS_EX_LAYERED |
+        (TodoSticky_TopmostFor(taskId) ? WS_EX_TOPMOST : 0);
     sw->collapsed = TodoSticky_IsCollapsed(taskId);
     sw->topmostOverride = TodoSticky_TopmostOverride(taskId);
-    int fullH = h;
     sw->expandH = h;
-    if (sw->collapsed) h = STICKY_BAR_H + 2;
+    sw->expandW = w;
+    if (sw->collapsed) { w = STICKY_DOT_SIZE; h = STICKY_DOT_SIZE; }
     sw->hwnd = CreateWindowExW(ex, STICKY_CLASS,
                                L"Catime 便签", WS_POPUP | WS_VISIBLE | WS_THICKFRAME,
                                x, y, w, h, NULL, NULL,
                                GetModuleHandleW(NULL), NULL);
-    (void)fullH;
     if (!sw->hwnd) {
         if (sw->fTitle) DeleteObject(sw->fTitle);
         if (sw->fBody) DeleteObject(sw->fBody);
@@ -261,5 +266,6 @@ void TodoStickies_Show(const char *taskId) {
         return;
     }
     ShowWindow(sw->hwnd, SW_SHOW);
+    TodoSticky_ApplyOpacity(sw->hwnd);
     TodoSticky_UpdateTips(sw->hwnd, sw->collapsed);
 }

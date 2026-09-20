@@ -51,6 +51,10 @@ void TodoSticky_SetTopmostOverride(const char *taskId, int mode);
 BOOL TodoSticky_TopmostFor(const char *taskId);
 void TodoSticky_RetopAll(void);
 void TodoSticky_UpdateTips(HWND hwnd, BOOL collapsed);
+/* Opacity 30..100 percent ([Sticky] Opacity). */
+int TodoSticky_Opacity(void);
+void TodoSticky_SetOpacity(int pct);
+void TodoSticky_ApplyOpacity(HWND hwnd);
 
 #ifdef __cplusplus
 }

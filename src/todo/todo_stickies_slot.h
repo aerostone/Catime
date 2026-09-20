@@ -14,6 +14,8 @@
 #include "todo/todo_types.h"
 
 #define STICKY_SLOT_MAX_WIN 16
+/* Collapsed dot mode: window shrinks to this square (px). */
+#define STICKY_DOT_SIZE 32
 
 typedef struct {
     BOOL used;
@@ -24,8 +26,9 @@ typedef struct {
     POINT dragOff;
     HFONT fTitle;
     HFONT fBody;
-    BOOL collapsed;       /* title-bar only */
+    BOOL collapsed;       /* dot mode */
     int expandH;          /* remembered height for expand */
+    int expandW;          /* remembered width for expand */
     int topmostOverride;  /* -1 inherit global, 0 normal, 1 topmost */
     char pomoTaskId[TODO_STORE_ID_LEN]; /* bound pomo row id ("" = none) */
 } StickyWin;

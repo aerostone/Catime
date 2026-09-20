@@ -39,12 +39,15 @@ void TodoSticky_SetCollapsedUI(HWND hwnd, StickyWin *sw, BOOL collapsed) {
     GetWindowRect(hwnd, &wr);
     int w = wr.right - wr.left;
     if (sw->collapsed) {
+        /* dot mode: remember full size, shrink to a 32px square */
         sw->expandH = wr.bottom - wr.top;
-        SetWindowPos(hwnd, NULL, 0, 0, w, STICKY_BAR_H + 2,
+        sw->expandW = w;
+        SetWindowPos(hwnd, NULL, 0, 0, STICKY_DOT_SIZE, STICKY_DOT_SIZE,
                      SWP_NOMOVE | SWP_NOZORDER);
     } else {
-        int h = sw->expandH >= 120 ? sw->expandH : 180;
-        SetWindowPos(hwnd, NULL, 0, 0, w, h, SWP_NOMOVE | SWP_NOZORDER);
+        int h = sw->expandH >= 150 ? sw->expandH : 220;
+        int ew = sw->expandW >= 200 ? sw->expandW : 300;
+        SetWindowPos(hwnd, NULL, 0, 0, ew, h, SWP_NOMOVE | SWP_NOZORDER);
     }
     InvalidateRect(hwnd, NULL, TRUE);
 }

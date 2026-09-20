@@ -179,6 +179,7 @@
 #define IDC_TODO_GROUP_STATE 811          /**< List dialog state/search group */
 #define IDC_TODO_GROUP_SYNC 812           /**< Settings sync group */
 #define IDC_TODO_GROUP_STICKY 813         /**< Settings sticky group */
+#define IDC_TODO_STICKY_OPACITY 814       /**< Sticky opacity combo */
 
 /** @brief Custom text display dialog identifiers */
 #define IDD_CUSTOM_TEXT_DISPLAY_DIALOG 770      /**< Custom text display dialog */
