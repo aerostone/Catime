@@ -4,6 +4,7 @@
  */
 #include "window_commands_internal.h"
 #include "dialog/dialog_todo.h"
+#include "todo/todo_sync.h"
 
 LRESULT CmdTodoList(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;

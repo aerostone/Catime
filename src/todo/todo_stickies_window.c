@@ -10,7 +10,8 @@
 #include "todo_sticky_pomo.h"
 #include "todo_sticky_rows.h"
 
-BOOL TodoSticky_SetCollapsedUI(HWND hwnd, StickyWin *sw, BOOL collapsed);
+#include "todo_stickies_slot.h"
+/* Defined in todo_sticky_rowmenu.c; declared in slot.h. */
 
 #define STICKY_CLASS L"CatimeStickyClass"
 #define STICKY_BAR_H 32
