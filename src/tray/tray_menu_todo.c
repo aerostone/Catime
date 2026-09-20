@@ -78,7 +78,7 @@ void BuildTodoMenu(HMENU hMenu) {
     if (n > 0) AppendMenuW(hTodo, MF_SEPARATOR, 0, NULL);
 
     AppendMenuW(hTodo, MF_STRING, CLOCK_IDM_TODO_NEW_STICKY,
-                GetLocalizedString(L"\u65b0\u5efa\u4fbf\u7b3e", L"New Sticky Note"));
+                GetLocalizedString(L"\u65b0\u5efa\u4efb\u52a1\u2026", L"New Task..."));
     AppendMenuW(hTodo, MF_STRING, CLOCK_IDM_TODO_LIST,
                 GetLocalizedString(L"\u4efb\u52a1\u5217\u8868\u2026", L"Task List..."));
     AppendMenuW(hTodo, MF_SEPARATOR, 0, NULL);

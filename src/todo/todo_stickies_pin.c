@@ -13,8 +13,8 @@
 
 extern const char *TodoStore_IniPath(void);
 
-#define STICKY_DEF_W 240
-#define STICKY_DEF_H 180
+#define STICKY_DEF_W 300
+#define STICKY_DEF_H 220
 
 static void SecFor(const char *taskId, char *out, size_t cap) {
     _snprintf_s(out, cap, _TRUNCATE, "Sticky%s", taskId ? taskId : "");
@@ -54,8 +54,8 @@ void TodoSticky_LoadGeom(const char *taskId, int *x, int *y, int *w, int *h) {
         dw = GetPrivateProfileIntA(sec, "W", dw, ini);
         dh = GetPrivateProfileIntA(sec, "H", dh, ini);
     }
-    if (dw < 160) dw = 160;
-    if (dh < 120) dh = 120;
+    if (dw < 200) dw = 200;
+    if (dh < 150) dh = 150;
     if (x) *x = dx;
     if (y) *y = dy;
     if (w) *w = dw;

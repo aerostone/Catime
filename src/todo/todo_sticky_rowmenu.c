@@ -4,7 +4,8 @@
  *
  * Menu is built from the bound task id (never row position):
  * - start pomo on this task, toggle done, expand/collapse,
- *   per-card topmost, rename, unpin, delete.
+ *   per-card topmost, unpin. Rename + delete retired: all edits
+ *   live in the task list dialog; the card is display-only.
  * SetCollapsedUI resizes window + persists flag. ApplyTopmost flips
  * z-order per override. FindCatimeMainWindow locates the main HWND
  * for launching the shared pomodoro timer.
@@ -20,23 +21,15 @@
 #include "language.h"
 
 #define STICKY_TIMER_POMO 9201
-void TodoStickyEdit_Open(HWND parent, const char *taskId, HWND *editOut);
-
-static void Rowmenu_OpenEdit(StickyWin *sw) {
-    if (!sw || sw->edit) return;
-    TodoStickyEdit_Open(sw->hwnd, sw->taskId, &sw->edit);
-}
 
 
 
-#define STICKY_BAR_H 26
+#define STICKY_BAR_H 32
 #define STICKY_MENU_DONE 9101
 #define STICKY_MENU_UNPIN 9102
-#define STICKY_MENU_DELETE 9103
 #define STICKY_MENU_EXPAND 9104
 #define STICKY_MENU_TOPMOST 9105
 #define STICKY_MENU_POMO 9106
-#define STICKY_MENU_RENAME 9107
 
 void TodoSticky_SetCollapsedUI(HWND hwnd, StickyWin *sw, BOOL collapsed) {
     if (!hwnd || !sw) return;
@@ -112,14 +105,9 @@ void TodoSticky_ShowRowMenu(HWND hwnd, StickyWin *sw) {
     AppendMenuW(m, MF_STRING | (TodoSticky_TopmostFor(sw->taskId) ? MF_CHECKED : 0),
                 STICKY_MENU_TOPMOST,
                 GetLocalizedString(L"\u7f6e\u9876\u6b64\u5361", L"Pin on top"));
-    AppendMenuW(m, MF_STRING, STICKY_MENU_RENAME,
-                GetLocalizedString(L"\u91cd\u547d\u540d\u2026", L"Rename..."));
     AppendMenuW(m, MF_SEPARATOR, 0, NULL);
     AppendMenuW(m, MF_STRING, STICKY_MENU_UNPIN,
                 GetLocalizedString(L"\u53d6\u6d88\u7f6e\u9876", L"Unpin"));
-    /* D3: delete sits last + confirms (see RunMenuById). */
-    AppendMenuW(m, MF_STRING, STICKY_MENU_DELETE,
-                GetLocalizedString(L"\u5220\u9664\u4efb\u52a1\u2026", L"Delete task..."));
     POINT pt;
     GetCursorPos(&pt);
     UINT cmd = TrackPopupMenu(m, TPM_RETURNCMD, pt.x, pt.y, 0, hwnd, NULL);
@@ -152,18 +140,6 @@ void TodoSticky_RunMenuById(HWND hwnd, StickyWin *sw, unsigned cmd) {
         InvalidateRect(hwnd, NULL, TRUE);
     } else if (cmd == STICKY_MENU_UNPIN) {
         TodoSticky_SetPinned(taskId, FALSE);
-    } else if (cmd == STICKY_MENU_DELETE) {
-        int rc = MessageBoxW(hwnd,
-            GetLocalizedString(
-                L"\u5220\u9664\u540e\u5c06\u540c\u6b65\u5220\u9664\u670d\u52a1\u7aef\u4efb\u52a1\uff0c\u786e\u8ba4\u5220\u9664\uff1f",
-                L"Delete will also remove the server task on next sync. Delete?"),
-            GetLocalizedString(L"TODO", L"TODO"),
-            MB_OKCANCEL | MB_ICONWARNING);
-        if (rc != IDOK) return;
-        char id[TODO_STORE_ID_LEN];
-        strcpy_s(id, sizeof(id), taskId);
-        TodoStickies_Forget(id);
-        TodoStore_Remove(id);
     } else if (cmd == STICKY_MENU_EXPAND) {
         if (sw->collapsed) TodoSticky_SetCollapsedUI(hwnd, sw, FALSE);
         else TodoSticky_SetCollapsedUI(hwnd, sw, TRUE);
@@ -179,8 +155,6 @@ void TodoSticky_RunMenuById(HWND hwnd, StickyWin *sw, unsigned cmd) {
         sw->collapsed = FALSE;
         SetTimer(hwnd, STICKY_TIMER_POMO, 1000, NULL);
         InvalidateRect(hwnd, NULL, TRUE);
-    } else if (cmd == STICKY_MENU_RENAME) {
-        Rowmenu_OpenEdit(sw);
     }
 }
 

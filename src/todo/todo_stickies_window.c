@@ -10,20 +10,17 @@
 #include "todo_sticky_pomo.h"
 #include "todo_sticky_rows.h"
 
-BOOL TodoStickyEdit_Commit(const char *oldId, const wchar_t *newTitle,
-                           char *newIdOut, size_t newIdCap);
+BOOL TodoSticky_SetCollapsedUI(HWND hwnd, StickyWin *sw, BOOL collapsed);
 
 #define STICKY_CLASS L"CatimeStickyClass"
-#define STICKY_BAR_H 26
+#define STICKY_BAR_H 32
 #define STICKY_SLOT_MAX_WIN 16
 #define STICKY_EDIT_ID 9001
 #define STICKY_MENU_DONE 9101
 #define STICKY_MENU_UNPIN 9102
-#define STICKY_MENU_DELETE 9103
 #define STICKY_MENU_EXPAND 9104
 #define STICKY_MENU_TOPMOST 9105
 #define STICKY_MENU_POMO 9106
-#define STICKY_MENU_RENAME 9107
 #define STICKY_TIMER_POMO 9201
 
 void TodoSticky_LoadGeom(const char *taskId, int *x, int *y, int *w, int *h);
@@ -77,26 +74,14 @@ static BOOL LoadTask(const char *id, TodoTask *out) {
     return FALSE;
 }
 
+/* Display-only card: the inline editor is retired; CloseEdit/OpenEdit stay
+ * as no-op shims so WM_COMMAND/WM_KEYDOWN/WM_DESTROY need no changes. */
 static void CloseEdit(StickyWin *sw, BOOL commit) {
-    if (!sw->edit) return;
-    if (commit) {
-        wchar_t wt[TODO_STORE_TITLE_LEN];
-        GetWindowTextW(sw->edit, wt, _countof(wt));
-        char newId[TODO_STORE_ID_LEN] = "";
-        if (TodoStickyEdit_Commit(sw->taskId, wt, newId, sizeof(newId))) {
-            if (newId[0]) strcpy_s(sw->taskId, sizeof(sw->taskId), newId);
-        }
-    }
-    DestroyWindow(sw->edit);
-    sw->edit = NULL;
-    InvalidateRect(sw->hwnd, NULL, TRUE);
+    (void)sw; (void)commit;
 }
 
-void TodoStickyEdit_Open(HWND parent, const char *taskId, HWND *editOut);
-
 static void OpenEdit(StickyWin *sw) {
-    if (sw->edit) return;
-    TodoStickyEdit_Open(sw->hwnd, sw->taskId, &sw->edit);
+    (void)sw; /* retired: edits live in the task list dialog */
 }
 
 static LRESULT CALLBACK StickyProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
@@ -161,11 +146,9 @@ static LRESULT CALLBACK StickyProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         return 0;
     case WM_LBUTTONDBLCLK: {
         if (!sw) break;
-        int y = GET_Y_LPARAM(lp);
-        if (y <= STICKY_BAR_H)
-            TodoSticky_SetCollapsedUI(hwnd, sw, !sw->collapsed);
-        else if (!sw->collapsed)
-            OpenEdit(sw);
+        /* Display-only card: any double-click toggles collapse.
+         * All edits live in the task list dialog. */
+        TodoSticky_SetCollapsedUI(hwnd, sw, !sw->collapsed);
         return 0;
     }
     case WM_RBUTTONUP: {
@@ -251,11 +234,11 @@ void TodoStickies_Show(const char *taskId) {
     memset(sw, 0, sizeof(*sw));
     sw->used = TRUE;
     strcpy_s(sw->taskId, sizeof(sw->taskId), taskId);
-    sw->fTitle = CreateFontW(-14, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+    sw->fTitle = CreateFontW(-16, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
                              DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
                              CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
                              DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
-    sw->fBody = CreateFontW(-13, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+    sw->fBody = CreateFontW(-14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
                             DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
                             CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
                             DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");

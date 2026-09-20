@@ -5,6 +5,8 @@
  * Shared by the window module. Colors: pale yellow default,
  * importance tints the title bar (none gray, low green, med orange,
  * high red). Done tasks render struck title via gray text.
+ * Display-only card: title + due date + pomo countdown; all edits
+ * live in the task list dialog.
  */
 #include <windows.h>
 #include <stdio.h>
@@ -35,7 +37,7 @@ void TodoSticky_PaintEx(HDC hdc, const RECT *rc, const TodoTask *t,
                         HFONT fTitle, HFONT fBody, BOOL collapsed,
                         int pomoRemSec) {
     if (!hdc || !rc || !t) return;
-    int barH = 26;
+    int barH = 32;
     HBRUSH body = CreateSolidBrush(TodoSticky_BodyColor());
     if (body) {
         FillRect(hdc, rc, body);

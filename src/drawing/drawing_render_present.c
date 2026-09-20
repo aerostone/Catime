@@ -4,7 +4,7 @@
  */
 
 #include "drawing_render_internal.h"
-#include "todo/todo_overlay_draw.h"
+#include "language.h"
 
 void PresentDrawingPaintFrame(PaintFrameContext* frame) {
     if (!frame) return;
@@ -64,7 +64,7 @@ void PresentDrawingPaintFrame(PaintFrameContext* frame) {
     blend.SourceConstantAlpha = alpha;
     blend.AlphaFormat = AC_SRC_ALPHA;
 
-    TodoOverlay_DrawOnMemDC(memDC, rect.right, rect.bottom);
+    /* TODO overlay removed: stickies are standalone; countdown stays clean. */
 
     BOOL layeredUpdateSucceeded = TRUE;
     if (!UpdateLayeredWindow(hwnd, hdcScreen, &ptDst, &sizeWnd, memDC, &ptSrc, 0, &blend, ULW_ALPHA)) {

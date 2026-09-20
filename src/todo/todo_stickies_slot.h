@@ -18,7 +18,7 @@
 typedef struct {
     BOOL used;
     HWND hwnd;
-    HWND edit;
+    HWND edit; /* retired: kept for struct layout compat, always NULL */
     char taskId[TODO_STORE_ID_LEN];
     BOOL dragging;
     POINT dragOff;
