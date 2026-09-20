@@ -20,9 +20,6 @@
 
 #include "todo_stickies_slot.h"
 
-#define STICKY_TIMER_POMO 9201
-#define STICKY_TIMER_KW 9202 /* keyword persistence debounce */
-
 BOOL g_stickyClassReg = FALSE;
 
 

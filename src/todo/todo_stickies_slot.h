@@ -15,6 +15,8 @@
 
 #define STICKY_SLOT_MAX_WIN 16
 #define STICKY_EDIT_ID 9001 /* keyword filter edit */
+#define STICKY_TIMER_POMO 9201 /* 1s tick while a pomodoro is bound */
+#define STICKY_TIMER_KW 9202 /* keyword persistence debounce (ms 300) */
 
 /* Context-menu command ids (card-local, not dialog ids). */
 #define STICKY_CMD_NEW_TASK 9101
