@@ -1,10 +1,9 @@
 /**
  * @file todo_stickies_window.c
- * @brief Sticky board card window: creation, painting, drag, hit-test.
+ * @brief Sticky card WndProc: paint, drag, select/hover/keys, menus.
  *
- * Layout: title bar (drag / fold / open list / hide), filter row
- * (week-all toggle + keyword edit + add button), task rows
- * (click = toggle done, right-click = row menu).
+ * N1: click selects (+hover); dblclick/menu toggles done. N4: no
+ * title-bar hide. N5: arrows/Space/Esc keyboard card.
  */
 #include <string.h>
 #include <windowsx.h>
@@ -21,7 +20,6 @@
 #include "todo_stickies_slot.h"
 
 BOOL g_stickyClassReg = FALSE;
-
 
 void TodoSticky_Repaint(StickyWin *sw) {
     if (sw && sw->hwnd) InvalidateRect(sw->hwnd, NULL, FALSE);
@@ -66,15 +64,12 @@ static void HitTitleBar(StickyWin *sw, int x, int y) {
     RECT rc;
     GetClientRect(sw->hwnd, &rc);
     int fromRight = rc.right - x;
-    if (fromRight <= BOARD_HIT_CLOSE) {
-        TodoStickies_HideBoard(sw->board);
-        return;
-    }
-    if (fromRight <= BOARD_HIT_CLOSE + BOARD_HIT_LIST) {
+    /* N4: no one-click hide; the rest is drag. */
+    if (fromRight <= BOARD_HIT_LIST) {
         OpenList(sw, FALSE);
         return;
     }
-    if (fromRight <= BOARD_HIT_CLOSE + BOARD_HIT_LIST + BOARD_HIT_FOLD) {
+    if (fromRight <= BOARD_HIT_LIST + BOARD_HIT_FOLD) {
         TodoSticky_SetCollapsedUI(sw->hwnd, sw, !sw->collapsed);
         return;
     }
@@ -99,12 +94,15 @@ LRESULT CALLBACK StickyProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                                  TodoSticky_PomoRemainingFor(sw->board), sw->fTitle);
             TodoBoard_PaintFilter(hdc, &rc, TodoBoard_Scope(sw->board), "",
                                   sw->fBody);
-            TodoBoard_PaintRows(hdc, &rc, tasks, n, sw->fBody);
+            TodoBoard_PaintRowsEx(hdc, &rc, tasks, n, sw->fBody,
+                                      sw->selId,
+                                      sw->hoverRow < n ? sw->hoverRow : -1);
         } else if (sw) {
             TodoBoard_PaintTitle(hdc, &rc, sw->board,
                                  TodoBoard_OpenCount(sw->board), TRUE, 0,
                                  sw->fTitle);
         }
+        TodoSticky_PaintFocus(hdc, &rc, sw, hwnd);
         EndPaint(hwnd, &ps);
         return 0;
     }
@@ -147,38 +145,101 @@ LRESULT CALLBACK StickyProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             }
             return 0;
         }
+        /* N1: click selects; completion needs dblclick or the menu. */
         int row = BoardLayout_RowAt(y);
         if (row >= 0) {
             char id[TODO_STORE_ID_LEN] = "";
             if (TodoSticky_RowIdAt(sw->board, row, id, sizeof(id))) {
-                TodoTask t;
-                memset(&t, 0, sizeof(t));
-                if (TodoStore_FindById(id, &t)) {
-                    TodoStore_SetDone(t.id, !t.done);
+                if (strcmp(sw->selId, id) != 0) {
+                    strcpy_s(sw->selId, sizeof(sw->selId), id);
                     TodoSticky_Repaint(sw);
                 }
+                SetFocus(hwnd);
             }
         }
         return 0;
     }
-    case WM_MOUSEMOVE:
+    case WM_MOUSEMOVE: {
         if (sw && sw->dragging) {
             POINT pt;
             GetCursorPos(&pt);
             SetWindowPos(hwnd, NULL, pt.x - sw->dragOff.x,
                          pt.y - sw->dragOff.y, 0, 0,
                          SWP_NOSIZE | SWP_NOZORDER);
+            return 0;
+        }
+        /* N1 hover affordance: repaint only when the row changes. */
+        if (sw && !sw->collapsed) {
+            int x = GET_X_LPARAM(lp), y = GET_Y_LPARAM(lp);
+            (void)x;
+            int row = (y > BOARD_BAR_H + BOARD_FILTER_H)
+                          ? BoardLayout_RowAt(y)
+                          : -1;
+            if (row != sw->hoverRow) {
+                sw->hoverRow = row;
+                TodoSticky_Repaint(sw);
+            }
+            if (row >= 0) {
+                TRACKMOUSEEVENT tme;
+                memset(&tme, 0, sizeof(tme));
+                tme.cbSize = sizeof(tme);
+                tme.dwFlags = TME_LEAVE;
+                tme.hwndTrack = hwnd;
+                TrackMouseEvent(&tme);
+            }
         }
         return 0;
+    }
+    case WM_MOUSELEAVE:
+        if (sw && sw->hoverRow != -1) {
+            sw->hoverRow = -1;
+            TodoSticky_Repaint(sw);
+        }
+        return 0;
+    case WM_SETFOCUS:
+    case WM_KILLFOCUS:
+        TodoSticky_Repaint(TodoSticky_SlotByHwnd(hwnd));
+        return 0;
+    case WM_GETDLGCODE:
+        return DLGC_WANTARROWS | DLGC_WANTCHARS;
+    case WM_KEYDOWN: {
+        /* N5: minimal keyboard card. */
+        StickyWin *ksw = TodoSticky_SlotByHwnd(hwnd);
+        if (ksw && !ksw->collapsed) {
+            if (wp == VK_ESCAPE) {
+                TodoStickies_HideBoard(ksw->board);
+                return 0;
+            }
+            if (wp == VK_UP || wp == VK_DOWN) {
+                TodoSticky_MoveSelection(ksw,
+                                         wp == VK_DOWN ? 1 : -1);
+                return 0;
+            }
+            if (wp == VK_SPACE || wp == VK_RETURN) {
+                TodoSticky_ToggleSelected(ksw);
+                return 0;
+            }
+        }
+        break;
+    }
     case WM_LBUTTONUP:
         if (sw && sw->dragging) {
             sw->dragging = FALSE;
             ReleaseCapture();
         }
         return 0;
-    case WM_LBUTTONDBLCLK:
-        if (sw) TodoSticky_SetCollapsedUI(hwnd, sw, !sw->collapsed);
+    case WM_LBUTTONDBLCLK: {
+        if (!sw) break;
+        int y = GET_Y_LPARAM(lp);
+        int row = (y > BOARD_BAR_H + BOARD_FILTER_H)
+                      ? BoardLayout_RowAt(y)
+                      : -1;
+        if (row >= 0)
+            TodoSticky_ToggleSelected(sw);
+        else
+            TodoSticky_SetCollapsedUI(hwnd, sw, !sw->collapsed);
         return 0;
+    }
     case WM_RBUTTONUP: {
         if (!sw) break;
         if (sw->collapsed) {

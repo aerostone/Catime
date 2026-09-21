@@ -2,7 +2,8 @@
  * @file tray_menu_todo.c
  * @brief TODO submenu: open tasks, board stickies, sync state, settings.
  *
- * Layout: "TODO (n)" popup -> header info row, top 5 open tasks
+ * Layout: "TODO (n)" popup -> header info row, top 3 open tasks
+ * + overflow row (T1: menu stays under 8 rows)
  * (click = open the list with that row preselected, never destructive),
  * New Task..., Stickies submenu (per-board show/hide, persisted),
  * Task list..., then sync status / conflicts / Sync now / Settings.
@@ -98,10 +99,17 @@ void BuildTodoMenu(HMENU hMenu) {
     AppendMenuW(hTodo, MF_STRING | MF_DISABLED | MF_GRAYED, 0, head);
     AppendMenuW(hTodo, MF_SEPARATOR, 0, NULL);
 
-    for (int i = 0; i < n; i++) {
+    int show = n > 3 ? 3 : n;
+    for (int i = 0; i < show; i++) {
         wchar_t item[176];
         RowLabel(&tasks[i], item, _countof(item));
         AppendMenuW(hTodo, MF_STRING, TODO_MENU_TASK_BASE + i, item);
+    }
+    if (open > show) {
+        wchar_t more[96];
+        _snwprintf_s(more, _countof(more), _TRUNCATE,
+                     L"\uu66F4\uu591A (%d)\u9879...", open - show);
+        AppendMenuW(hTodo, MF_STRING, CLOCK_IDM_TODO_LIST, more);
     }
     if (n > 0) AppendMenuW(hTodo, MF_SEPARATOR, 0, NULL);
 
@@ -113,9 +121,13 @@ void BuildTodoMenu(HMENU hMenu) {
                 GetLocalizedString(L"\u4efb\u52a1\u5217\u8868\u2026",
                                    L"Task List..."));
     AppendMenuW(hTodo, MF_SEPARATOR, 0, NULL);
+    /* T1: status merges into Sync Now; the conflict row stays separate. */
     wchar_t stLabel[96];
     TodoSyncStatus_Label(stLabel, _countof(stLabel));
-    AppendMenuW(hTodo, MF_STRING | MF_DISABLED | MF_GRAYED, 0, stLabel);
+    wchar_t syncItem[160];
+    _snwprintf_s(syncItem, _countof(syncItem), _TRUNCATE, L"%s \u00b7 %s",
+                 GetLocalizedString(L"\u7acb\u5373\u540c\u6b65", L"Sync Now"),
+                 stLabel);
     int conflicts = TodoConflict_Count();
     if (conflicts > 0) {
         wchar_t cf[96];
@@ -124,8 +136,7 @@ void BuildTodoMenu(HMENU hMenu) {
                      conflicts);
         AppendMenuW(hTodo, MF_STRING, TODO_MENU_CONFLICT_BASE, cf);
     }
-    AppendMenuW(hTodo, MF_STRING, CLOCK_IDM_TODO_SYNC_NOW,
-                GetLocalizedString(L"\u7acb\u5373\u540c\u6b65", L"Sync Now"));
+    AppendMenuW(hTodo, MF_STRING, CLOCK_IDM_TODO_SYNC_NOW, syncItem);
     AppendMenuW(hTodo, MF_STRING, CLOCK_IDM_TODO_SETTINGS,
                 GetLocalizedString(L"TODO \u8bbe\u7f6e\u2026",
                                    L"TODO Settings..."));

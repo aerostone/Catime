@@ -1,6 +1,9 @@
 /**
  * @file todo_rowmark.c
- * @brief Unified [A]/[B]/[C]/[ ]/[x] row marks with overdue override.
+ * @brief Unified [!]/[A]/[B]/[C]/[ ]/[x] row marks.
+ *
+ * [!] is overdue (L3: never shares a symbol with importance); [x] done;
+ * [A]/[B]/[C] user-set importance; [ ] none.
  */
 #include "todo_rowmark.h"
 
@@ -31,10 +34,13 @@ static BOOL RowOverdue(const TodoTask *t) {
     return strcmp(t->dueDate, today) < 0;
 }
 
+/* Exported for sticky ImpTag sharing (same overdue meaning). */
+BOOL TodoTask_IsOverdue(const TodoTask *t) { return RowOverdue(t); }
+
 const char *TodoRowMark(const TodoTask *t) {
     if (!t) return "[ ]";
     if (t->done) return "[x]";
-    if (RowOverdue(t)) return "[A]";
+    if (RowOverdue(t)) return "[!]";
     switch (t->importance) {
     case TODO_IMPORTANCE_HIGH: return "[A]";
     case TODO_IMPORTANCE_MEDIUM: return "[B]";

@@ -16,9 +16,9 @@
 #define BOARD_BAR_COLLAPSED_W 150 /* collapsed card width */
 #define BOARD_BAR_COLLAPSED_H (BOARD_BAR_H + 2) /* never clip the bar */
 
-/* Title bar hit zones (x measured from the right edge). */
-#define BOARD_HIT_CLOSE 18  /* rightmost 18px: hide sticky */
-#define BOARD_HIT_LIST 20   /* next 20px: open task list for this board */
+/* Title bar hit zones (x measured from the right edge). N4: no hide
+ * glyph; rightmost LIST opens the list, next FOLD toggles collapse. */
+#define BOARD_HIT_LIST 20   /* rightmost 20px: open task list for this board */
 #define BOARD_HIT_FOLD 20   /* next 20px: toggle collapse */
 #define BOARD_HIT_ADD_W 22  /* filter row: rightmost 22px = add task */
 

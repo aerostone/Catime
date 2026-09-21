@@ -45,6 +45,25 @@ void TodoDlg_GetBoard(HWND hdlg, char *out, size_t cap) {
     WideCharToMultiByte(CP_UTF8, 0, w, -1, out, (int)cap, NULL, NULL);
 }
 
+/* L2: sync board is pull-only - the Add row is visibly disabled. */
+static void SyncAddRowGate(HWND hdlg) {
+    char b[TODO_STORE_BOARD_LEN];
+    TodoDlg_GetBoard(hdlg, b, sizeof(b));
+    BOOL sync = (strcmp(b, TODO_BOARD_SYNC) == 0);
+    EnableWindow(GetDlgItem(hdlg, IDC_TODO_NEW_EDIT), !sync);
+    EnableWindow(GetDlgItem(hdlg, IDC_TODO_NEW_DUE), !sync);
+    EnableWindow(GetDlgItem(hdlg, IDC_TODO_NEW_IMPORTANCE), !sync);
+    EnableWindow(GetDlgItem(hdlg, IDC_TODO_ADD_BUTTON), !sync);
+    if (sync)
+        SetDlgItemTextW(hdlg, IDC_TODO_NEW_EDIT,
+            GetLocalizedString(L"\u540C\u6B65\u677F\u53EA\u8BFB\uFF0C\u8BF7\u5207\u6362\u5230\u672C\u5730\u677F\u6DFB\u52A0",
+                               L"Sync board is read-only"));
+    else if (!GetWindowTextLengthW(GetDlgItem(hdlg, IDC_TODO_NEW_EDIT)))
+        SetDlgItemTextW(hdlg, IDC_TODO_NEW_EDIT, L"");
+}
+
+void TodoDlg_RefreshAddGate(HWND hdlg) { SyncAddRowGate(hdlg); }
+
 void TodoDlg_SyncStickyButton(HWND hdlg) {
     char b[TODO_STORE_BOARD_LEN];
     TodoDlg_GetBoard(hdlg, b, sizeof(b));
@@ -70,6 +89,7 @@ void TodoDlg_InitBoardCombo(HWND hdlg) {
     }
     SendMessageW(c, CB_SETCURSEL, 0, 0);
     TodoDlg_SyncStickyButton(hdlg);
+    SyncAddRowGate(hdlg);
 }
 
 void TodoDlg_ApplyBoardFilter(HWND hdlg, TodoFilter *f) {
@@ -140,6 +160,7 @@ static void AddBoard(HWND hdlg) {
     int idx = TodoBoard_IndexByName(name);
     if (c && idx >= 0) SendMessageW(c, CB_SETCURSEL, (WPARAM)idx, 0);
     TodoDlg_SyncStickyButton(hdlg);
+    SyncAddRowGate(hdlg);
     TodoDlg_RefreshList(hdlg);
 }
 
@@ -181,6 +202,7 @@ static void RenameBoard(HWND hdlg) {
     HWND c = GetDlgItem(hdlg, IDC_TODO_BOARD_SEL);
     if (c) SendMessageW(c, CB_SETCURSEL, (WPARAM)idx, 0);
     TodoDlg_SyncStickyButton(hdlg);
+    SyncAddRowGate(hdlg);
     TodoDlg_RefreshList(hdlg);
 }
 
@@ -201,6 +223,7 @@ static void DeleteBoard(HWND hdlg) {
     TodoBoard_Remove(idx);
     TodoDlg_InitBoardCombo(hdlg);
     TodoDlg_SyncStickyButton(hdlg);
+    SyncAddRowGate(hdlg);
     TodoDlg_RefreshList(hdlg);
 }
 
@@ -211,17 +234,40 @@ static void ToggleBoardSticky(HWND hdlg) {
     TodoDlg_SyncStickyButton(hdlg);
 }
 
+/* L1: board management hides behind ... (popup menu at the button). */
+static void BoardManageMenu(HWND hdlg) {
+    HMENU m = CreatePopupMenu();
+    if (!m) return;
+    AppendMenuW(m, MF_STRING, 1,
+                GetLocalizedString(L"\u65B0\u5EFA\u4FBF\u7B7E...",
+                                   L"New board..."));
+    AppendMenuW(m, MF_STRING, 2,
+                GetLocalizedString(L"\u91CD\u547D\u540D\u4FBF\u7B7E...",
+                                   L"Rename board..."));
+    AppendMenuW(m, MF_STRING, 3,
+                GetLocalizedString(L"\u5220\u9664\u4FBF\u7B7E",
+                                   L"Delete board"));
+    HWND btn = GetDlgItem(hdlg, IDC_TODO_BOARD_MORE);
+    RECT br = {0, 0, 0, 0};
+    if (btn) GetWindowRect(btn, &br);
+    int cmd = (int)TrackPopupMenu(m, TPM_RETURNCMD | TPM_RIGHTBUTTON,
+                                  br.left, br.top, 0, hdlg, NULL);
+    DestroyMenu(m);
+    if (cmd == 1) AddBoard(hdlg);
+    else if (cmd == 2) RenameBoard(hdlg);
+    else if (cmd == 3) DeleteBoard(hdlg);
+}
+
 /* TRUE when the command id belonged to the board row. */
 BOOL TodoDlg_BoardCommand(HWND hdlg, WORD id, WORD code) {
     switch (id) {
-    case IDC_TODO_BOARD_NEW: AddBoard(hdlg); return TRUE;
-    case IDC_TODO_BOARD_RENAME: RenameBoard(hdlg); return TRUE;
-    case IDC_TODO_BOARD_DEL: DeleteBoard(hdlg); return TRUE;
+    case IDC_TODO_BOARD_MORE: BoardManageMenu(hdlg); return TRUE;
     case IDC_TODO_BOARD_SHOW: ToggleBoardSticky(hdlg); return TRUE;
     case IDC_TODO_BOARD_SEL:
         /* CBN_SELCHANGE only: ignore paint-time focus notifications */
         if (code != CBN_SELCHANGE) return TRUE;
         TodoDlg_SyncStickyButton(hdlg);
+        SyncAddRowGate(hdlg);
         TodoDlg_SyncScopeCombo(hdlg);
         TodoDlg_RefreshList(hdlg);
         return TRUE;

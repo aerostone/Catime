@@ -6,7 +6,8 @@
  * - list dialog 470x330: filter row y=2..40 split into two GROUPBOXes
  *   (time scope x=4..254, state/search x=258..466) so no label overlaps an
  *   input; task list y=46..252; add row y=256..270; action row y=278..292;
- *   board row y=299..313 (Close right-aligned at x=412).
+ *   board row y=299..313: Board combo + ... manage menu + Sticky
+ *   toggle (Close right-aligned at x=412).
  * - settings dialog 300x232: sync GROUPBOX y=4..142, sticky GROUPBOX
  *   y=146..204, buttons y=210..224. UiDebug dump tags: "todo-list"/"todo-settings".
  */
@@ -40,11 +41,9 @@ BEGIN
     PUSHBUTTON  "Sync now", IDC_TODO_SYNC_NOW_BTN, 120, 278, 70, 14
     PUSHBUTTON  "Settings...", IDC_TODO_SETTINGS_BTN, 194, 278, 64, 14
     LTEXT       "Board:", CLOCK_IDC_STATIC, 8, 304, 28, 10
-    COMBOBOX    IDC_TODO_BOARD_SEL, 38, 300, 104, 90, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
-    PUSHBUTTON  "New", IDC_TODO_BOARD_NEW, 148, 299, 34, 13
-    PUSHBUTTON  "Rename", IDC_TODO_BOARD_RENAME, 186, 299, 46, 13
-    PUSHBUTTON  "Del", IDC_TODO_BOARD_DEL, 236, 299, 30, 13
-    PUSHBUTTON  "Sticky", IDC_TODO_BOARD_SHOW, 270, 299, 50, 13
+    COMBOBOX    IDC_TODO_BOARD_SEL, 38, 300, 150, 90, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON  "...", IDC_TODO_BOARD_MORE, 192, 299, 30, 13
+    PUSHBUTTON  "Sticky", IDC_TODO_BOARD_SHOW, 226, 299, 50, 13
     PUSHBUTTON  "Close", IDCANCEL, 412, 299, 50, 14
 END
 

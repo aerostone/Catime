@@ -27,8 +27,7 @@
 #define STICKY_CMD_HIDE 9106
 #define STICKY_CMD_ROW_DONE 9111
 #define STICKY_CMD_ROW_POMO 9112
-#define STICKY_CMD_ROW_DUE 9113
-#define STICKY_CMD_ROW_IMP 9114
+#define STICKY_CMD_ROW_EDIT 9113 /* N3: honest jump to the list editor */
 #define STICKY_CMD_ROW_MOVE 9120 /* + board index */
 #define STICKY_CMD_ROW_DELETE 9121
 
@@ -44,6 +43,8 @@ typedef struct {
     POINT dragOff;
     int expandW, expandH; /* geometry to restore when expanding */
     char menuTaskId[TODO_STORE_ID_LEN]; /* row under the last right-click */
+    char selId[TODO_STORE_ID_LEN]; /* selected row (single-select, N1/N5) */
+    int hoverRow; /* hovered row for click affordance, -1 = none (N1) */
 } StickyWin;
 
 int TodoSticky_SlotCount(void);
@@ -60,6 +61,11 @@ void TodoSticky_SetCollapsedUI(HWND hwnd, StickyWin *sw, BOOL collapsed);
 void TodoSticky_Repaint(StickyWin *sw);
 void TodoSticky_LayoutChildren(StickyWin *sw);
 void TodoSticky_SyncEditFromBoard(StickyWin *sw);
+/* todo_sticky_select.c: selection model (N1/N5). */
+void TodoSticky_PaintFocus(HDC hdc, const RECT *rc, StickyWin *sw,
+                           HWND self);
+void TodoSticky_MoveSelection(StickyWin *sw, int dir);
+void TodoSticky_ToggleSelected(StickyWin *sw);
 /* todo_sticky_rows.c: board queries shared by window + create TUs. */
 int TodoSticky_LoadBoardTasks(const char *board, TodoTask *out, int cap);
 int TodoSticky_PomoRemainingFor(const char *board);

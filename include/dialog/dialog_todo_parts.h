@@ -24,6 +24,8 @@ TodoDlgState *TodoDlg_State(void);
 void TodoDlg_InitBoardCombo(HWND hdlg);
 void TodoDlg_GetBoard(HWND hdlg, char *out, size_t cap);
 void TodoDlg_SyncStickyButton(HWND hdlg);
+/* L2: enable/disable the Add row (sync board is pull-only). */
+void TodoDlg_RefreshAddGate(HWND hdlg);
 void TodoDlg_ApplyBoardFilter(HWND hdlg, TodoFilter *f);
 BOOL TodoDlg_BoardCommand(HWND hdlg, WORD id, WORD code);
 /* Keep the list scope combo aligned with the selected board's scope and

@@ -11,7 +11,9 @@
 #include <windows.h>
 
 #include "todo_board.h"
+#include "todo_rowmark.h"
 #include "todo_store.h"
+#include "language.h"
 
 #include "todo_board_layout.h"
 
@@ -48,9 +50,12 @@ void TodoBoard_BarColor(TodoImportance imp, BOOL done, COLORREF *out) {
     }
 }
 
-/* Importance marker drawn in front of a row title. */
-static const wchar_t *ImpTag(TodoImportance imp) {
-    switch (imp) {
+/* Importance marker drawn in front of a row title.
+ * [!] is reserved for overdue (L3); [A]/[B]/[C] only reflect the
+ * user-set importance so the two meanings never share a symbol. */
+static const wchar_t *ImpTag(const TodoTask *t) {
+    if (!t->done && t->dueDate[0] && TodoTask_IsOverdue(t)) return L"[!]";
+    switch (t->importance) {
     case TODO_IMPORTANCE_HIGH: return L"(A)";
     case TODO_IMPORTANCE_MEDIUM: return L"(B)";
     case TODO_IMPORTANCE_LOW: return L"(C)";
@@ -58,7 +63,8 @@ static const wchar_t *ImpTag(TodoImportance imp) {
     }
 }
 
-/* --- title bar ------------------------------------------------------ */
+/* --- title bar (N4/N6): drag + fold + list only. Hide lives in the
+ * card menu; the close glyph is a pin (hide), never a lying x. ---- */
 void TodoBoard_PaintTitle(HDC hdc, const RECT *rc, const char *board,
                           int openCount, BOOL collapsed, int pomoRemSec,
                           HFONT fTitle) {
@@ -75,7 +81,12 @@ void TodoBoard_PaintTitle(HDC hdc, const RECT *rc, const char *board,
     MultiByteToWideChar(CP_UTF8, 0, board ? board : "", -1, wname, 64);
     wchar_t wbuf[96];
     if (pomoRemSec > 0) {
-        _snwprintf_s(wbuf, 96, _TRUNCATE, L"%s  %d   P %02d:%02d", wname,
+        wchar_t fmt[32];
+        wcsncpy_s(fmt, 32,
+                  GetLocalizedString(L"%s  %d   \u756A\u8304 %02d:%02d",
+                                     L"%s  %d   Pomodoro %02d:%02d"),
+                  _TRUNCATE);
+        _snwprintf_s(wbuf, 96, _TRUNCATE, fmt, wname,
                      openCount, pomoRemSec / 60, pomoRemSec % 60);
     } else if (collapsed) {
         _snwprintf_s(wbuf, 96, _TRUNCATE, L"%s (%d)", wname, openCount);
@@ -84,22 +95,20 @@ void TodoBoard_PaintTitle(HDC hdc, const RECT *rc, const char *board,
     }
     RECT tx = bar;
     tx.left += 6;
-    tx.right -= (BOARD_HIT_CLOSE + BOARD_HIT_LIST + BOARD_HIT_FOLD);
+    tx.right -= (BOARD_HIT_LIST + BOARD_HIT_FOLD);
     if (tx.right < tx.left) tx.right = tx.left;
     SetTextColor(hdc, COL_TEXT);
     DrawTextW(hdc, wbuf, -1, &tx,
               DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS |
                   DT_NOPREFIX);
-    /* right-hand glyphs: fold, list, close */
+    /* right-hand glyphs: fold, list (hide moved to card menu, N4) */
     SetTextColor(hdc, COL_TEXT);
     int right = bar.right;
-    const wchar_t *gFold = collapsed ? L"▢" : L"–";
-    TextOutW(hdc, right - BOARD_HIT_CLOSE - BOARD_HIT_LIST -
-                      BOARD_HIT_FOLD + 4,
+    const wchar_t *gFold = collapsed ? L"\u25A2" : L"\u2013";
+    TextOutW(hdc, right - BOARD_HIT_LIST - BOARD_HIT_FOLD + 4,
              bar.top + 6, gFold, (int)wcslen(gFold));
-    TextOutW(hdc, right - BOARD_HIT_CLOSE - BOARD_HIT_LIST + 4, bar.top + 6,
-             L"≡", 1);
-    TextOutW(hdc, right - BOARD_HIT_CLOSE + 3, bar.top + 6, L"×", 1);
+    TextOutW(hdc, right - BOARD_HIT_LIST + 4, bar.top + 6,
+             L"\u2261", 1);
     HPEN pen = CreatePen(PS_SOLID, 1, COL_LINE);
     if (pen) {
         HPEN old = (HPEN)SelectObject(hdc, pen);
@@ -149,6 +158,15 @@ void TodoBoard_PaintFilter(HDC hdc, const RECT *rc, TodoDueScope scope,
 /* --- task rows ------------------------------------------------------ */
 void TodoBoard_PaintRows(HDC hdc, const RECT *rc, const TodoTask *tasks,
                          int count, HFONT fBody) {
+    TodoBoard_PaintRowsEx(hdc, rc, tasks, count, fBody, NULL, -1);
+}
+
+#define COL_HOVER RGB(255, 243, 205)
+#define COL_SELFOCUS RGB(255, 232, 170)
+
+void TodoBoard_PaintRowsEx(HDC hdc, const RECT *rc, const TodoTask *tasks,
+                           int count, HFONT fBody, const char *selId,
+                           int hoverRow) {
     SetBkMode(hdc, TRANSPARENT);
     SetFont(hdc, fBody);
     if (count <= 0) {
@@ -160,17 +178,34 @@ void TodoBoard_PaintRows(HDC hdc, const RECT *rc, const TodoTask *tasks,
                   DT_LEFT | DT_TOP | DT_SINGLELINE | DT_NOPREFIX);
         return;
     }
+    int more = 0; /* N2: rows that do not fit are announced, never cut */
     for (int i = 0; i < count; i++) {
         int top = BOARD_BODY_TOP + i * BOARD_ROW_H;
-        if (top + BOARD_ROW_H > rc->bottom && i > 0) break;
+        if (top + BOARD_ROW_H > rc->bottom && i > 0) {
+            more = count - i;
+            break;
+        }
         RECT rr = *rc;
         rr.top = top;
         rr.bottom = top + BOARD_ROW_H;
-        if (i % 2) {
-            HBRUSH b = CreateSolidBrush(RGB(252, 246, 224));
-            if (b) {
-                FillRect(hdc, &rr, b);
-                DeleteObject(b);
+        {
+            BOOL sel = selId && selId[0] &&
+                       strcmp(tasks[i].id, selId) == 0;
+            COLORREF band = 0;
+            if (sel) band = COL_SELFOCUS;
+            else if (i == hoverRow) band = COL_HOVER;
+            if (band) {
+                HBRUSH hb = CreateSolidBrush(band);
+                if (hb) {
+                    FillRect(hdc, &rr, hb);
+                    DeleteObject(hb);
+                }
+            } else if (i % 2) {
+                HBRUSH b = CreateSolidBrush(RGB(252, 246, 224));
+                if (b) {
+                    FillRect(hdc, &rr, b);
+                    DeleteObject(b);
+                }
             }
         }
         wchar_t wt[TODO_STORE_TITLE_LEN] = L"";
@@ -183,7 +218,7 @@ void TodoBoard_PaintRows(HDC hdc, const RECT *rc, const TodoTask *tasks,
         SetTextColor(hdc, tasks[i].done ? COL_DIM : COL_TEXT);
         wchar_t line[TODO_STORE_TITLE_LEN + 8];
         _snwprintf_s(line, sizeof(line) / sizeof(line[0]), _TRUNCATE, L"%s %s",
-                     ImpTag(tasks[i].importance), wt);
+                     ImpTag(&tasks[i]), wt);
         DrawTextW(hdc, line, -1, &tx,
                   DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS |
                       DT_NOPREFIX);
@@ -201,6 +236,19 @@ void TodoBoard_PaintRows(HDC hdc, const RECT *rc, const TodoTask *tasks,
             SetTextColor(hdc, tasks[i].done ? COL_DIM : COL_DUE);
             DrawTextW(hdc, right, -1, &r2,
                       DT_RIGHT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+        }
+    }
+    if (more > 0) {
+        RECT mr = *rc;
+        mr.top = rc->bottom - BOARD_ROW_H;
+        mr.bottom = rc->bottom;
+        if (mr.top >= BOARD_BODY_TOP) {
+            SetTextColor(hdc, COL_DIM);
+            wchar_t mm[64];
+            _snwprintf_s(mm, 64, _TRUNCATE,
+                         L"\u2026\u8FD8\u6709 %d \u9879\uFF0C\u53CC\u51FB\u6253\u5F00\u5217\u8868", more);
+            DrawTextW(hdc, mm, -1, &mr,
+                      DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
         }
     }
 }

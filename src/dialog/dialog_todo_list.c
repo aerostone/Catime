@@ -126,6 +126,7 @@ static INT_PTR CALLBACK TodoListProc(HWND hdlg, UINT msg,
             }
             TodoDlg_SyncStickyButton(hdlg);
             TodoDlg_SyncScopeCombo(hdlg);
+            TodoDlg_RefreshAddGate(hdlg);
             s_board[0] = '\0';
         }
         EnableWindow(GetDlgItem(hdlg, IDC_TODO_FILTER_DUE_FROM), FALSE);

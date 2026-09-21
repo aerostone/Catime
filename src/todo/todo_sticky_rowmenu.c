@@ -48,7 +48,8 @@ void TodoSticky_ShowCardMenu(HWND hwnd, StickyWin *sw) {
                 GetLocalizedString(L"置顶显示", L"Always on top"));
     AppendMenuW(m, MF_SEPARATOR, 0, NULL);
     AppendMenuW(m, MF_STRING, STICKY_CMD_HIDE,
-                GetLocalizedString(L"隐藏便签", L"Hide sticky"));
+                GetLocalizedString(L"隐藏此便签（任务保留）",
+                                   L"Hide this board (tasks kept)"));
     POINT pt;
     GetCursorPos(&pt);
     int cmd = (int)TrackPopupMenu(m, TPM_RETURNCMD | TPM_RIGHTBUTTON, pt.x,
@@ -90,13 +91,11 @@ static BOOL LoadTask(const char *id, TodoTask *out) {
     return TodoStore_FindById(id, out);
 }
 
-static void AddDueItems(HMENU m, const TodoTask *t) {
+static void AddEditItem(HMENU m) {
+    /* N3: single-editor rule - the list owns date/importance pickers. */
     AppendMenuW(m, MF_SEPARATOR, 0, NULL);
-    AppendMenuW(m, MF_STRING, STICKY_CMD_ROW_DUE,
-                GetLocalizedString(L"设置截止日期...", L"Set due date..."));
-    AppendMenuW(m, MF_STRING, STICKY_CMD_ROW_IMP,
-                GetLocalizedString(L"调整优先级...", L"Change importance..."));
-    (void)t;
+    AppendMenuW(m, MF_STRING, STICKY_CMD_ROW_EDIT,
+                GetLocalizedString(L"在列表中编辑...", L"Edit in task list..."));
 }
 
 static void AddBoardItems(HMENU m, const char *board) {
@@ -140,7 +139,7 @@ void TodoSticky_ShowRowMenu(HWND hwnd, StickyWin *sw, int row) {
                        : GetLocalizedString(L"标记完成", L"Mark done"));
     AppendMenuW(m, MF_STRING, STICKY_CMD_ROW_POMO,
                 GetLocalizedString(L"开始番茄钟", L"Start pomodoro"));
-    AddDueItems(m, &t);
+    AddEditItem(m);
     if (t.source != TODO_SOURCE_SYNC) AddBoardItems(m, sw->board);
     AppendMenuW(m, MF_SEPARATOR, 0, NULL);
     AppendMenuW(m, MF_STRING, STICKY_CMD_ROW_DELETE,
@@ -183,8 +182,7 @@ void TodoSticky_RowMenuCommand(HWND hwnd, StickyWin *sw, UINT cmd) {
     case STICKY_CMD_ROW_POMO:
         TodoStickyPomo_Start(MainHwnd(), t.id);
         break;
-    case STICKY_CMD_ROW_DUE:
-    case STICKY_CMD_ROW_IMP:
+    case STICKY_CMD_ROW_EDIT:
         EditInList(sw);
         return;
     case STICKY_CMD_ROW_DELETE: {

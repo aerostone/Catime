@@ -16,6 +16,10 @@ void TodoBoard_PaintFilter(HDC hdc, const RECT *rc, TodoDueScope scope,
                            const char *keyword, HFONT fBody);
 void TodoBoard_PaintRows(HDC hdc, const RECT *rc, const TodoTask *tasks,
                          int count, HFONT fBody);
+/* N1/N5 variant: selected id + hover row get highlight bands. */
+void TodoBoard_PaintRowsEx(HDC hdc, const RECT *rc, const TodoTask *tasks,
+                           int count, HFONT fBody, const char *selId,
+                           int hoverRow);
 void TodoBoard_BarColor(TodoImportance imp, BOOL done, COLORREF *out);
 
 #endif /* CATIME_TODO_BOARD_RENDER_H */
