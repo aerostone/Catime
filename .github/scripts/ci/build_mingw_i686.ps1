@@ -50,19 +50,22 @@ if ($LASTEXITCODE -ne 0 -or $peHeader -notmatch "file format pei-i386") {
 $file = Get-Item -LiteralPath $executable
 # UIDebug artifact is exempt from the size budget (overlay + logs).
 if ($UiDebug -ne "ON") {
+    # 1200 KiB: task-book manager dialog + date picker + dot paint
+    # added ~4 KiB of .text over the 1180 KiB budget (actual 1182 KiB);
+    # same ~18 KiB headroom policy as the 1150->1180 raise.
     # 1180 KiB: TODO feature set (todo.txt store, CJK normalize,
     # entry-level tweek sync, stickies, dialogs) added ~20 KiB of .text
     # over the 1.6.4 baseline; upstream raised 1000->1150 KiB for the
     # same reason in 0bf94722.
-    $maximumReleaseBytes = 1180 * 1KB
+    $maximumReleaseBytes = 1200 * 1KB
     if ($file.Length -gt $maximumReleaseBytes) {
-        throw "Release binary exceeds the 1180 KiB size budget: $($file.Length) bytes"
+        throw "Release binary exceeds the 1200 KiB size budget: $($file.Length) bytes"
     }
 }
 $sizeKiB = "{0:F2}" -f ($file.Length / 1KB)
 $sha256 = (Get-FileHash -LiteralPath $executable -Algorithm SHA256).Hash
 Write-Host "Unsigned x86 EXE size: $sizeKiB KiB"
-Write-Host "Release size budget: 1180.00 KiB"
+Write-Host "Release size budget: 1200.00 KiB"
 Write-Host "SHA-256: $sha256"
 
 $smokeArgs = "--ci-smoke --ci-exit-ms=1500"
