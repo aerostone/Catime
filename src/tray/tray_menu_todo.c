@@ -26,34 +26,6 @@
 
 #include "window_procedure/window_commands.h"
 
-/* Row text: mark + optional due date + title + board tag (skipped for the default board). */
-static void RowLabel(const TodoTask *t, wchar_t *out, size_t cap) {
-    char row[288];
-    const char *tag = t->board[0] && strcmp(t->board, TODO_BOARD_DEFAULT) != 0
-                          ? t->board
-                          : "";
-    if (tag[0]) {
-        if (t->dueDate[0])
-            _snprintf_s(row, sizeof(row), _TRUNCATE, "%s %s %s \u00b7%s",
-                        TodoRowMark(t), t->dueDate, t->title, tag);
-        else
-            _snprintf_s(row, sizeof(row), _TRUNCATE, "%s %s \u00b7%s",
-                        TodoRowMark(t), t->title, tag);
-    } else if (t->dueDate[0]) {
-        _snprintf_s(row, sizeof(row), _TRUNCATE, "%s %s %s", TodoRowMark(t),
-                    t->dueDate, t->title);
-    } else {
-        _snprintf_s(row, sizeof(row), _TRUNCATE, "%s %s", TodoRowMark(t),
-                    t->title);
-    }
-    wchar_t wr[288];
-    if (MultiByteToWideChar(CP_UTF8, 0, row, -1, wr, _countof(wr)))
-        wcsncpy_s(out, cap, wr, _TRUNCATE);
-    else
-        out[0] = L'\0';
-    if (cap) out[cap - 1] = L'\0';
-}
-
 /* Checkable list of boards: click toggles that board's desktop card. */
 static void BuildStickySubmenu(HMENU hTodo) {
     HMENU sub = CreatePopupMenu();
@@ -73,73 +45,48 @@ static void BuildStickySubmenu(HMENU hTodo) {
     }
     AppendMenuW(sub, MF_SEPARATOR, 0, NULL);
     AppendMenuW(sub, MF_STRING, CLOCK_IDM_TODO_SHOW_ALL,
-                GetLocalizedString(L"\u663e\u793a\u5168\u90e8\u4fbf\u7b7e",
-                                   L"Show all stickies"));
+                GetLocalizedString(L"\u663e\u793a\u5168\u90e8\u4efb\u52a1\u672c",
+                                   L"Show all task books"));
     if (!AppendMenuW(hTodo, MF_STRING | MF_POPUP, (UINT_PTR)sub,
-                     GetLocalizedString(L"\u4fbf\u7b7e", L"Stickies")))
+                     GetLocalizedString(L"\u4efb\u52a1\u672c", L"Task books")))
         DestroyMenu(sub);
 }
 
 void BuildTodoMenu(HMENU hMenu) {
+    /* RD4: no task rows, no New Task, no Task List duplicate, no TODO
+     * settings. Three entries only: task manager, task-book manager,
+     * show-task-books submenu; then the sync/conflict status rows. */
     if (!hMenu) return;
-    TodoFilter f;
-    TodoFilter_InitDefault(&f);
-    f.showDone = FALSE;
-    TodoTask tasks[TODO_MENU_TASK_COUNT];
-    int n = TodoStore_Query(&f, tasks, TODO_MENU_TASK_COUNT);
     int open = TodoStore_OpenCount();
 
     HMENU hTodo = CreatePopupMenu();
     if (!hTodo) return;
 
-    /* header: info only, disabled */
     wchar_t head[128];
     _snwprintf_s(head, _countof(head), _TRUNCATE,
-                 L"%d open \u00b7 click a task to open the list", open);
+                 L"TODO (%d \u5F00\u653E)", open);
     AppendMenuW(hTodo, MF_STRING | MF_DISABLED | MF_GRAYED, 0, head);
     AppendMenuW(hTodo, MF_SEPARATOR, 0, NULL);
 
-    int show = n > 3 ? 3 : n;
-    for (int i = 0; i < show; i++) {
-        wchar_t item[176];
-        RowLabel(&tasks[i], item, _countof(item));
-        AppendMenuW(hTodo, MF_STRING, TODO_MENU_TASK_BASE + i, item);
-    }
-    if (open > show) {
-        wchar_t more[96];
-        _snwprintf_s(more, _countof(more), _TRUNCATE,
-                     L"\u66F4\u591A (%d)\u9879...", open - show);
-        AppendMenuW(hTodo, MF_STRING, CLOCK_IDM_TODO_LIST, more);
-    }
-    if (n > 0) AppendMenuW(hTodo, MF_SEPARATOR, 0, NULL);
-
-    AppendMenuW(hTodo, MF_STRING, CLOCK_IDM_TODO_NEW,
-                GetLocalizedString(L"\u65b0\u5efa\u4efb\u52a1\u2026",
-                                   L"New Task..."));
-    BuildStickySubmenu(hTodo);
     AppendMenuW(hTodo, MF_STRING, CLOCK_IDM_TODO_LIST,
-                GetLocalizedString(L"\u4efb\u52a1\u5217\u8868\u2026",
-                                   L"Task List..."));
+                GetLocalizedString(L"\u4EFB\u52A1\u7BA1\u7406\u2026",
+                                   L"Task manager..."));
+    AppendMenuW(hTodo, MF_STRING, CLOCK_IDM_TODO_BOARDS,
+                GetLocalizedString(L"\u4EFB\u52A1\u672C\u7BA1\u7406\u2026",
+                                   L"Task-book manager..."));
+    BuildStickySubmenu(hTodo);
     AppendMenuW(hTodo, MF_SEPARATOR, 0, NULL);
-    /* T1: status merges into Sync Now; the conflict row stays separate. */
     wchar_t stLabel[96];
     TodoSyncStatus_Label(stLabel, _countof(stLabel));
-    wchar_t syncItem[160];
-    _snwprintf_s(syncItem, _countof(syncItem), _TRUNCATE, L"%s \u00b7 %s",
-                 GetLocalizedString(L"\u7acb\u5373\u540c\u6b65", L"Sync Now"),
-                 stLabel);
+    AppendMenuW(hTodo, MF_STRING | MF_DISABLED | MF_GRAYED, 0, stLabel);
     int conflicts = TodoConflict_Count();
     if (conflicts > 0) {
         wchar_t cf[96];
         _snwprintf_s(cf, _countof(cf), _TRUNCATE,
-                     L"\u51b2\u7a81 (%d) \u00b7 \u6253\u5f00\u76ee\u5f55",
+                     L"\u51B2\u7A81 (%d) \u00B7 \u6253\u5F00\u76EE\u5F55",
                      conflicts);
         AppendMenuW(hTodo, MF_STRING, TODO_MENU_CONFLICT_BASE, cf);
     }
-    AppendMenuW(hTodo, MF_STRING, CLOCK_IDM_TODO_SYNC_NOW, syncItem);
-    AppendMenuW(hTodo, MF_STRING, CLOCK_IDM_TODO_SETTINGS,
-                GetLocalizedString(L"TODO \u8bbe\u7f6e\u2026",
-                                   L"TODO Settings..."));
 
     wchar_t label[64];
     if (conflicts > 0)

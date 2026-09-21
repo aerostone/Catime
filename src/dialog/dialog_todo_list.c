@@ -161,6 +161,10 @@ static INT_PTR CALLBACK TodoListProc(HWND hdlg, UINT msg,
             TodoDlg_OnDelete(hdlg);
             return TRUE;
         }
+        if (id == IDC_TODO_SAVE_BUTTON) {
+            TodoDlg_OnSaveEdit(hdlg); /* RD9 */
+            return TRUE;
+        }
         if (id == IDC_TODO_SYNC_NOW_BTN) {
             TodoSync_PollNow();
             TodoDlg_RefreshInto(hdlg);

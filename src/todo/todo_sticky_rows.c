@@ -31,6 +31,18 @@ int TodoSticky_PomoRemainingFor(const char *board) {
     return 0;
 }
 
+/* RD6: peak open-task importance for the minimized dot tint. */
+TodoImportance TodoSticky_PeakImportance(const char *board) {
+    TodoTask tasks[TODO_STORE_MAX_TASKS];
+    int n = TodoSticky_LoadBoardTasks(board, tasks, TODO_STORE_MAX_TASKS);
+    TodoImportance peak = TODO_IMPORTANCE_NONE;
+    for (int i = 0; i < n; i++) {
+        if (!tasks[i].done && tasks[i].importance > peak)
+            peak = tasks[i].importance;
+    }
+    return peak;
+}
+
 int TodoSticky_RowCount(const char *board) {
     return TodoBoard_OpenCount(board);
 }

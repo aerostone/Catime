@@ -184,6 +184,18 @@
 #define IDC_TODO_BOARD_MORE 816           /**< Board manage (...) menu button */
 #define IDC_TODO_BOARD_SHOW 819           /**< Show/hide the board sticky button */
 
+/** @brief Task-book manager dialog identifiers (RD3) */
+#define IDD_TODO_BOARDS_DIALOG 820        /**< Task-book manager dialog */
+#define IDC_TODO_BOOKS_LIST 821           /**< Board listbox */
+#define IDC_TODO_BOOK_NEW 822             /**< New board button */
+#define IDC_TODO_BOOK_RENAME 823          /**< Rename board button */
+#define IDC_TODO_BOOK_DEL 824             /**< Delete board button */
+#define IDC_TODO_BOOK_SHOW 825            /**< Show/hide selected board card */
+#define IDC_TODO_BOOK_SYNC_NOW 826        /**< Sync now button */
+#define IDC_TODO_BOOK_SETTINGS 827        /**< Open sync settings button */
+#define IDC_TODO_BOOK_STATUS 828          /**< Sync status line */
+#define IDC_TODO_SAVE_BUTTON 829          /**< Save edit-row into selected task (RD9) */
+
 /** @brief Custom text display dialog identifiers */
 #define IDD_CUSTOM_TEXT_DISPLAY_DIALOG 770      /**< Custom text display dialog */
 #define IDC_CUSTOM_TEXT_DISPLAY_HINT 771        /**< Custom text display hint label */

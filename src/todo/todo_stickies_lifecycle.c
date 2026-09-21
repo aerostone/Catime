@@ -9,6 +9,7 @@
 #include <windows.h>
 
 #include "todo_board.h"
+#include "todo_board_layout.h"
 #include "todo_stickies.h"
 
 #include "todo_stickies_slot.h"
@@ -110,10 +111,15 @@ void TodoSticky_SetOpacity(int pct) { TodoBoard_SetOpacity(pct); }
 
 void TodoSticky_ApplyOpacity(HWND hwnd) {
     if (!hwnd) return;
-    int pct = TodoSticky_Opacity();
+    StickyWin *sw = TodoSticky_SlotByHwnd(hwnd);
+    BYTE alpha;
+    if (sw && sw->collapsed)
+        alpha = BOARD_DOT_ALPHA; /* RD6: minimized dot is translucent */
+    else
+        alpha = (BYTE)(255 * TodoSticky_Opacity() / 100);
     SetWindowLongPtrW(hwnd, GWL_EXSTYLE,
                       GetWindowLongPtrW(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
-    SetLayeredWindowAttributes(hwnd, 0, (BYTE)(255 * pct / 100), LWA_ALPHA);
+    SetLayeredWindowAttributes(hwnd, 0, alpha, LWA_ALPHA);
 }
 
 /* Re-applies z-order + opacity after a settings change. Cards with an

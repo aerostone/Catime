@@ -70,10 +70,10 @@ void TodoDlg_SyncStickyButton(HWND hdlg) {
     HWND btn = GetDlgItem(hdlg, IDC_TODO_BOARD_SHOW);
     if (!btn) return;
     SetWindowTextW(btn, TodoStickies_IsVisible(b)
-                            ? GetLocalizedString(L"\u9690\u85cf\u4fbf\u7b7e",
-                                                 L"Hide sticky")
-                            : GetLocalizedString(L"\u663e\u793a\u4fbf\u7b7e",
-                                                 L"Show sticky"));
+                            ? GetLocalizedString(L"\u9690\u85cf\u9762\u677F",
+                                                 L"Hide panel")
+                            : GetLocalizedString(L"\u663e\u793a\u9762\u677F",
+                                                 L"Show panel"));
 }
 
 void TodoDlg_InitBoardCombo(HWND hdlg) {
@@ -109,6 +109,7 @@ void TodoDlg_ApplyBoardFilter(HWND hdlg, TodoFilter *f) {
 }
 
 void TodoDlg_SyncScopeCombo(HWND hdlg) {
+    /* RD7: scope combo order is Week, Month, Custom, All. */
     char b[TODO_STORE_BOARD_LEN];
     TodoDlg_GetBoard(hdlg, b, sizeof(b));
     HWND cb = GetDlgItem(hdlg, IDC_TODO_FILTER_DUE_SCOPE);
@@ -135,13 +136,13 @@ static void AskName(HWND hdlg, const wchar_t *prompt, const char *initial,
     MultiByteToWideChar(CP_UTF8, 0, initial ? initial : "", -1, winit,
                         TODO_STORE_BOARD_LEN);
     out[0] = L'\0';
-    InputBox(hdlg, GetLocalizedString(L"TODO \u4fbf\u7b3e", L"TODO Board"),
+    InputBox(hdlg, GetLocalizedString(L"TODO \u4efb\u52a1\u672c", L"TODO Board"),
              prompt, winit, out, cap);
 }
 
 static void AddBoard(HWND hdlg) {
     wchar_t wname[TODO_STORE_BOARD_LEN];
-    AskName(hdlg, GetLocalizedString(L"\u65b0\u4fbf\u7b3e\u540d\u79f0\uff1a",
+    AskName(hdlg, GetLocalizedString(L"\u65b0\u4efb\u52a1\u672c\u540d\u79f0\uff1a",
                                      L"New board name:"),
             "", wname, TODO_STORE_BOARD_LEN);
     if (!wname[0]) return;
@@ -172,13 +173,13 @@ static void RenameBoard(HWND hdlg) {
     if (TodoBoard_IsSync(idx)) {
         MessageBoxW(hdlg,
                     GetLocalizedString(
-                        L"\u540c\u6b65\u4fbf\u7b3e\u540d\u79f0\u56fa\u5b9a",
+                        L"\u540c\u6b65\u4efb\u52a1\u672c\u540d\u79f0\u56fa\u5b9a",
                         L"The sync board keeps its name"),
                     L"TODO", MB_ICONINFORMATION);
         return;
     }
     wchar_t wname[TODO_STORE_BOARD_LEN];
-    AskName(hdlg, GetLocalizedString(L"\u4fbf\u7b3e\u65b0\u540d\u79f0\uff1a",
+    AskName(hdlg, GetLocalizedString(L"\u4efb\u52a1\u672c\u65b0\u540d\u79f0\uff1a",
                                      L"Rename board to:"),
             oldName, wname, TODO_STORE_BOARD_LEN);
     if (!wname[0]) return;
@@ -215,7 +216,7 @@ static void DeleteBoard(HWND hdlg) {
     wchar_t wname[TODO_STORE_BOARD_LEN], msg[256];
     MultiByteToWideChar(CP_UTF8, 0, name, -1, wname, TODO_STORE_BOARD_LEN);
     _snwprintf_s(msg, 256, _TRUNCATE,
-                 L"\u5220\u9664\u4fbf\u7b3e\u201c%s\u201d\uff1f\u4efb\u52a1\u5c06\u79fb\u5230\u7b2c\u4e00\u4e2a\u4fbf\u7b3e\u3002",
+                 L"\u5220\u9664\u4efb\u52a1\u672c\u201c%s\u201d\uff1f\u4efb\u52a1\u5c06\u79fb\u5230\u7b2c\u4e00\u4e2a\u4efb\u52a1\u672c\u3002",
                  wname);
     if (MessageBoxW(hdlg, msg, L"TODO", MB_OKCANCEL | MB_ICONWARNING) != IDOK)
         return;

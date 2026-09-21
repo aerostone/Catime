@@ -15,25 +15,15 @@
 
 #include "todo_stickies_slot.h"
 
-/* Push the persisted board keyword into the child edit control. */
+/* RD5: the card has no search box; keyword filtering lives in the
+ * task manager dialog only. These stay as no-ops for the layout call
+ * sites in the WndProc. */
 void TodoSticky_SyncEditFromBoard(StickyWin *sw) {
-    if (!sw || !sw->edit) return;
-    char kw[TODO_STORE_TITLE_LEN];
-    TodoBoard_Keyword(sw->board, kw, sizeof(kw));
-    wchar_t wkw[TODO_STORE_TITLE_LEN];
-    MultiByteToWideChar(CP_UTF8, 0, kw, -1, wkw, TODO_STORE_TITLE_LEN);
-    SetWindowTextW(sw->edit, wkw);
+    (void)sw;
 }
 
 void TodoSticky_LayoutChildren(StickyWin *sw) {
-    if (!sw || !sw->edit || !sw->hwnd) return;
-    RECT rc;
-    GetClientRect(sw->hwnd, &rc);
-    int left = 4 + BOARD_HIT_SCOPE_W + 4;
-    int right = rc.right - 4 - BOARD_HIT_ADD_W;
-    if (right < left) right = left;
-    MoveWindow(sw->edit, left, BOARD_BAR_H + 3, right - left,
-               BOARD_FILTER_H - 7, TRUE);
+    (void)sw;
 }
 
 static BOOL EnsureClass(void) {
@@ -53,18 +43,6 @@ static BOOL EnsureClass(void) {
     return TRUE;
 }
 
-static HWND MakeEdit(HWND parent) {
-    HWND e = CreateWindowExW(0, WC_EDITW, L"",
-                             WS_CHILD | WS_VISIBLE | WS_BORDER |
-                                 ES_AUTOHSCROLL,
-                             0, 0, 10, 10, parent,
-                             (HMENU)(INT_PTR)STICKY_EDIT_ID,
-                             GetModuleHandleW(NULL), NULL);
-    if (e) SendMessageW(e, WM_SETFONT,
-                        (WPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
-    return e;
-}
-
 void TodoStickies_ShowBoard(const char *board) {
     if (!board || !board[0] || !EnsureClass()) return;
     if (TodoBoard_IndexByName(board) < 0) return;
@@ -78,16 +56,16 @@ void TodoStickies_ShowBoard(const char *board) {
     }
     StickyWin *sw = exist ? exist : TodoSticky_SlotAlloc();
     if (!sw) return;
-    int x = 140, y = 140, w = 320, h = 260;
+    int x = 140, y = 140, w = 416, h = 338; /* RD2: +30% */
     TodoBoard_LoadGeom(board, &x, &y, &w, &h);
     memset(sw, 0, sizeof(*sw));
     sw->used = TRUE;
     strcpy_s(sw->board, sizeof(sw->board), board);
-    sw->fTitle = CreateFontW(-16, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+    sw->fTitle = CreateFontW(-21, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, /* RD2 +30% */
                              DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
                              CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
                              DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
-    sw->fBody = CreateFontW(-14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+    sw->fBody = CreateFontW(-18, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, /* RD2 +30% */
                             DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
                             CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
                             DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
@@ -100,7 +78,7 @@ void TodoStickies_ShowBoard(const char *board) {
         w = BOARD_BAR_COLLAPSED_W;
         h = BOARD_BAR_COLLAPSED_H;
     }
-    sw->hwnd = CreateWindowExW(ex, STICKY_CLASS, L"Catime 便签",
+    sw->hwnd = CreateWindowExW(ex, STICKY_CLASS, L"Catime TODO", /* RD1 */
                                WS_POPUP | WS_VISIBLE | WS_THICKFRAME |
                                    WS_CLIPCHILDREN,
                                x, y, w, h, NULL, NULL,
@@ -111,9 +89,7 @@ void TodoStickies_ShowBoard(const char *board) {
         sw->used = FALSE;
         return;
     }
-    sw->edit = MakeEdit(sw->hwnd);
-    TodoSticky_SyncEditFromBoard(sw);
-    if (sw->collapsed && sw->edit) ShowWindow(sw->edit, SW_HIDE);
+    sw->edit = NULL; /* RD5: no search box on the card */
     TodoSticky_LayoutChildren(sw);
     TodoBoard_SetVisible(board, TRUE);
     if (TodoStickyPomo_Active()) SetTimer(sw->hwnd, STICKY_TIMER_POMO, 1000, NULL);

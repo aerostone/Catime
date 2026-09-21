@@ -90,6 +90,7 @@ LRESULT CmdTodoList(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT CmdTodoShowAll(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT CmdTodoNew(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT CmdTodoNewSticky(HWND hwnd, WPARAM wp, LPARAM lp);
+LRESULT CmdTodoBooks(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT CmdTodoSettings(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT CmdTodoSyncNow(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT CmdBrowseFile(HWND hwnd, WPARAM wp, LPARAM lp);

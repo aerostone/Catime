@@ -53,7 +53,7 @@ void TodoSticky_UpdateTips(HWND hwnd, BOOL collapsed) {
         ti.rect.top = 0;
         ti.rect.right = rc.right;
         ti.rect.bottom = rc.bottom;
-        ti.lpszText = (LPWSTR)GetLocalizedString(L"\u70b9\u51fb\u5c55\u5f00\u4fbf\u7b7e", L"Click to expand");
+        ti.lpszText = (LPWSTR)GetLocalizedString(L"\u70b9\u51fb\u5c55\u5f00TODO", L"Click to expand");
         SendMessageW(tip, TTM_ADDTOOLW, 0, (LPARAM)&ti);
         SendMessageW(tip, TTM_SETMAXTIPWIDTH, 0, 300);
         SendMessageW(tip, TTM_ACTIVATE, TRUE, 0);
@@ -65,14 +65,15 @@ void TodoSticky_UpdateTips(HWND hwnd, BOOL collapsed) {
     ti.rect.top = 0;
     ti.rect.right = rc.right;
     ti.rect.bottom = STICKY_BAR_H;
-    ti.lpszText = (LPWSTR)GetLocalizedString(L"\u6253\u5f00\u4efb\u52a1\u5217\u8868", L"Open task list");
+    ti.lpszText = (LPWSTR)GetLocalizedString(L"\u6253\u5f00\u4efb\u52a1\u7ba1\u7406", L"Open task manager");
     SendMessageW(tip, TTM_ADDTOOLW, 0, (LPARAM)&ti);
     ti.uId = STICKY_TIP_BAR;
     ti.rect.left = 0;
     ti.rect.top = 0;
     ti.rect.right = rc.right - BOARD_HIT_LIST;
     ti.rect.bottom = STICKY_BAR_H;
-    ti.lpszText = collapsed ? GetLocalizedString(L"\u53cc\u51fb\u5c55\u5f00", L"Double-click to expand") : GetLocalizedString(L"\u53cc\u51fb\u6536\u8d77", L"Double-click to collapse");
+    /* RD6: fold button only, no double-click gesture. */
+    ti.lpszText = collapsed ? GetLocalizedString(L"\u70b9-\u5207\u6362\u5c55\u5f00", L"Press - to expand") : GetLocalizedString(L"\u70b9\u25a2\u6536\u8d77", L"Press the button to fold");
     SendMessageW(tip, TTM_ADDTOOLW, 0, (LPARAM)&ti);
     /* body zone */
     ti.uId = STICKY_TIP_BODY;

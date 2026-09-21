@@ -21,5 +21,8 @@ void TodoBoard_PaintRowsEx(HDC hdc, const RECT *rc, const TodoTask *tasks,
                            int count, HFONT fBody, const char *selId,
                            int hoverRow);
 void TodoBoard_BarColor(TodoImportance imp, BOOL done, COLORREF *out);
+/* RD6: minimized translucent dot. */
+void TodoBoard_PaintDot(HDC hdc, const RECT *rc, TodoImportance peak,
+                        int openCount);
 
 #endif /* CATIME_TODO_BOARD_RENDER_H */

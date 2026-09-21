@@ -196,6 +196,7 @@
 #define CLOCK_IDM_TODO_SETTINGS 148        /**< TODO sync settings dialog */
 #define CLOCK_IDM_TODO_SYNC_NOW 149        /**< Force one sync poll now */
 #define CLOCK_IDM_TODO_SHOW_ALL 150        /**< Show all sticky boards */
+#define CLOCK_IDM_TODO_BOARDS 151        /**< Open task-book manager (RD3/RD4) */
 
 /** @brief Basic menu identifiers */
 #define CLOCK_IDM_CUSTOM_COUNTDOWN 101       /**< Custom countdown input */

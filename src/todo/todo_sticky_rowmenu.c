@@ -33,10 +33,8 @@ void TodoSticky_ShowCardMenu(HWND hwnd, StickyWin *sw) {
     BOOL week = TodoBoard_Scope(sw->board) != TODO_DUE_SCOPE_ALL;
     HMENU m = CreatePopupMenu();
     if (!m) return;
-    AppendMenuW(m, MF_STRING, STICKY_CMD_NEW_TASK,
-                GetLocalizedString(L"新建任务...", L"New task..."));
     AppendMenuW(m, MF_STRING, STICKY_CMD_OPEN_LIST,
-                GetLocalizedString(L"打开任务列表...", L"Open task list..."));
+                GetLocalizedString(L"任务管理...", L"Task manager..."));
     AppendMenuW(m, MF_SEPARATOR, 0, NULL);
     AppendMenuW(m, MF_STRING | (week ? MF_CHECKED : 0), STICKY_CMD_SCOPE,
                 week ? GetLocalizedString(L"只看本周", L"This week only")
@@ -48,7 +46,7 @@ void TodoSticky_ShowCardMenu(HWND hwnd, StickyWin *sw) {
                 GetLocalizedString(L"置顶显示", L"Always on top"));
     AppendMenuW(m, MF_SEPARATOR, 0, NULL);
     AppendMenuW(m, MF_STRING, STICKY_CMD_HIDE,
-                GetLocalizedString(L"隐藏此便签（任务保留）",
+                GetLocalizedString(L"隐藏此任务本（任务保留）",
                                    L"Hide this board (tasks kept)"));
     POINT pt;
     GetCursorPos(&pt);
@@ -57,9 +55,6 @@ void TodoSticky_ShowCardMenu(HWND hwnd, StickyWin *sw) {
     DestroyMenu(m);
     if (!cmd) return;
     switch (cmd) {
-    case STICKY_CMD_NEW_TASK:
-        ShowTodoListDialogForBoard(MainHwnd(), sw->board, TRUE);
-        break;
     case STICKY_CMD_OPEN_LIST:
         ShowTodoListDialogForBoard(MainHwnd(), sw->board, FALSE);
         break;
@@ -114,7 +109,7 @@ static void AddBoardItems(HMENU m, const char *board) {
     }
     if (GetMenuItemCount(sub) > 0)
         AppendMenuW(m, MF_STRING | MF_POPUP, (UINT_PTR)sub,
-                    GetLocalizedString(L"移动到便签", L"Move to board"));
+                    GetLocalizedString(L"移动到任务本", L"Move to board"));
     else
         DestroyMenu(sub);
 }

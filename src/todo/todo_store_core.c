@@ -12,6 +12,7 @@
 #include <time.h>
 
 #include "todo_normalize.h"
+#include "todo_store_util.h"
 #include "todo_store.h"
 #include "todo_sync.h"
 #include "todo_txt.h"
@@ -27,22 +28,6 @@ static long s_nextId = 1;
 void TodoStore_Lock(void) { EnterCriticalSection(&s_lock); }
 void TodoStore_Unlock(void) { LeaveCriticalSection(&s_lock); }
 
-static void TodayStr(char *out, size_t cap) {
-    SYSTEMTIME st;
-    GetLocalTime(&st);
-    _snprintf_s(out, cap, _TRUNCATE, "%04d-%02d-%02d",
-                (int)st.wYear, (int)st.wMonth, (int)st.wDay);
-}
-
-static BOOL ValidDate(const char *d) {
-    if (!d || !d[0]) return TRUE; /* empty = no date */
-    if (strlen(d) != 10 || d[4] != '-' || d[7] != '-') return FALSE;
-    for (int i = 0; d[i]; i++) {
-        if (i == 4 || i == 7) continue;
-        if (d[i] < '0' || d[i] > '9') return FALSE;
-    }
-    return TRUE;
-}
 
 static void MakeId(char *out, size_t cap) {
     _snprintf_s(out, cap, _TRUNCATE, "L%ld", s_nextId++);
@@ -56,13 +41,10 @@ int TodoStore_FindIndex(const char *id) {
 }
 
 static void SaveLocked(void) {
-/* forward for TodoStore_Save */
     if (s_txtPath[0])
         TodoTxt_SaveFile(s_txtPath, s_tasks, s_count);
 }
 
-/* One-time import: legacy todo.ini sections -> memory. Runs only when
- * todo.txt is missing but todo.ini exists with Count > 0. */
 static void ImportLegacyIniLocked(void) {
     int n = GetPrivateProfileIntA("Todo", "Count", 0, s_iniPath);
     if (n <= 0) return;
@@ -170,7 +152,7 @@ BOOL TodoStore_AddTo(const char *title, TodoImportance imp, const char *dueDate,
     TodoNormalize_Copy(title, clean, sizeof(clean));
     title = clean;
     if (imp < TODO_IMPORTANCE_NONE || imp > TODO_IMPORTANCE_HIGH) return FALSE;
-    if (!ValidDate(dueDate)) return FALSE;
+    if (!TodoStore_ValidDate(dueDate)) return FALSE;
     TodoStore_Lock();
     BOOL ok = FALSE;
     if (s_count < TODO_STORE_MAX_TASKS) {
@@ -184,9 +166,10 @@ BOOL TodoStore_AddTo(const char *title, TodoImportance imp, const char *dueDate,
         if (dueDate) strcpy_s(t.dueDate, sizeof(t.dueDate), dueDate);
         if (board && board[0] && strlen(board) < TODO_STORE_BOARD_LEN)
             strcpy_s(t.board, sizeof(t.board), board);
-        TodayStr(t.createdAt, sizeof(t.createdAt));
+        TodoStore_TodayStr(t.createdAt, sizeof(t.createdAt));
         t.updatedAt = StampNow();
         s_tasks[s_count++] = t;
+        strcpy_s(s_lastAddedId, sizeof(s_lastAddedId), t.id); /* RD7 */
         if (s_txtPath[0]) SaveLocked();
         ok = TRUE;
     }
@@ -201,7 +184,7 @@ BOOL TodoStore_SetDone(const char *id, BOOL done) {
     BOOL ok = FALSE;
     if (i >= 0) {
         s_tasks[i].done = done;
-        if (done) TodayStr(s_tasks[i].doneAt, sizeof(s_tasks[i].doneAt));
+        if (done) TodoStore_TodayStr(s_tasks[i].doneAt, sizeof(s_tasks[i].doneAt));
         else s_tasks[i].doneAt[0] = '\0';
         s_tasks[i].updatedAt = StampNow();
         if (s_txtPath[0]) SaveLocked();
@@ -230,6 +213,24 @@ BOOL TodoStore_Remove(const char *id) {
     return ok;
 }
 
+BOOL TodoStore_SetTitle(const char *id, const char *title) {
+    if (!id || !id[0] || !title || !title[0]) return FALSE;
+    char clean[TODO_STORE_TITLE_LEN];
+    TodoNormalize_Copy(title, clean, sizeof(clean));
+    if (!clean[0]) return FALSE;
+    TodoStore_Lock();
+    int i = TodoStore_FindIndex(id);
+    BOOL ok = FALSE;
+    if (i >= 0) {
+        strcpy_s(s_tasks[i].title, sizeof(s_tasks[i].title), clean);
+        s_tasks[i].updatedAt = StampNow();
+        if (s_txtPath[0]) SaveLocked();
+        ok = TRUE;
+    }
+    TodoStore_Unlock();
+    return ok;
+}
+
 BOOL TodoStore_SetImportance(const char *id, TodoImportance imp) {
     if (!id || !id[0]) return FALSE;
     if (imp < TODO_IMPORTANCE_NONE || imp > TODO_IMPORTANCE_HIGH) return FALSE;
@@ -248,7 +249,7 @@ BOOL TodoStore_SetImportance(const char *id, TodoImportance imp) {
 
 BOOL TodoStore_SetDueDate(const char *id, const char *dueDate) {
     if (!id || !id[0]) return FALSE;
-    if (!ValidDate(dueDate)) return FALSE;
+    if (!TodoStore_ValidDate(dueDate)) return FALSE;
     TodoStore_Lock();
     int i = TodoStore_FindIndex(id);
     BOOL ok = FALSE;
@@ -261,6 +262,14 @@ BOOL TodoStore_SetDueDate(const char *id, const char *dueDate) {
     }
     TodoStore_Unlock();
     return ok;
+}
+
+void TodoStore_LastAddedId(char *out, size_t cap) {
+    if (out && cap) out[0] = '\0';
+    if (!out || cap == 0) return;
+    TodoStore_Lock();
+    strcpy_s(out, cap, s_lastAddedId);
+    TodoStore_Unlock();
 }
 
 void TodoStore_Reload(void) {

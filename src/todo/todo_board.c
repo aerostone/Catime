@@ -24,6 +24,7 @@ TodoDueScope TodoBoard_Scope(const char *name) {
     TodoBoard_GetStr(sec, "Scope", "week", v, sizeof(v));
     return (strcmp(v, "all") == 0) ? TODO_DUE_SCOPE_ALL : TODO_DUE_SCOPE_WEEK;
 }
+/* RD7: the card owns only week/all; month/custom live in the dialog. */
 
 void TodoBoard_SetScope(const char *name, TodoDueScope scope) {
     char sec[96];
@@ -69,8 +70,8 @@ void TodoBoard_LoadGeom(const char *name, int *x, int *y, int *w, int *h) {
         dw = GetPrivateProfileIntA(sec, "W", dw, ini);
         dh = GetPrivateProfileIntA(sec, "H", dh, ini);
     }
-    if (dw < 200) dw = 200;
-    if (dh < 120) dh = 120;
+    if (dw < 260) dw = 260; /* RD2: +30% minimum */
+    if (dh < 156) dh = 156;
     if (x) *x = dx;
     if (y) *y = dy;
     if (w) *w = dw;

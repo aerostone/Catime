@@ -30,6 +30,8 @@ void TodoDlg_InitCombos(HWND hdlg) {
     SendMessageW(scope, CB_ADDSTRING, 0,
         (LPARAM)GetLocalizedString(L"\u5168\u90e8", L"All"));
     SendMessageW(scope, CB_SETCURSEL, 0, 0);
+    /* RD8: fixed drop width so longer option text never stretches UI. */
+    SendMessageW(scope, CB_SETDROPPEDWIDTH, 90, 0);
     HWND src = GetDlgItem(hdlg, IDC_TODO_FILTER_SOURCE);
     SendMessageW(src, CB_ADDSTRING, 0,
         (LPARAM)GetLocalizedString(L"\u5168\u90e8", L"All"));
@@ -62,8 +64,14 @@ void TodoDlg_InitCombos(HWND hdlg) {
     SendDlgItemMessageW(hdlg, IDC_TODO_NEW_EDIT, EM_SETCUEBANNER_W,
                         TRUE, (LPARAM)GetLocalizedString(
                             L"\u65b0\u4efb\u52a1\u6807\u9898", L"New task title"));
-    SendDlgItemMessageW(hdlg, IDC_TODO_NEW_DUE, EM_SETCUEBANNER_W,
-                        TRUE, (LPARAM)L"YYYY-MM-DD");
+    /* RD8: due is a date picker (DTS_SHOWNONE); unchecked = no date. */
+    SendDlgItemMessageW(hdlg, IDC_TODO_NEW_DUE, DTM_SETSYSTEMTIME,
+                        GDT_NONE, 0);
+    /* RD8: custom-range edits get their own cues (only enabled then). */
+    SendDlgItemMessageW(hdlg, IDC_TODO_FILTER_DUE_FROM, EM_SETCUEBANNER_W,
+                        TRUE, (LPARAM)L"\u4ECE YYYY-MM-DD");
+    SendDlgItemMessageW(hdlg, IDC_TODO_FILTER_DUE_TO, EM_SETCUEBANNER_W,
+                        TRUE, (LPARAM)L"\u5230 YYYY-MM-DD");
     SetDlgItemTextW(hdlg, IDC_TODO_FILTER_DUE_FROM, L"");
     SetDlgItemTextW(hdlg, IDC_TODO_FILTER_DUE_TO, L"");
     SetWindowTextW(GetDlgItem(hdlg, IDC_TODO_ADD_BUTTON),
@@ -71,8 +79,10 @@ void TodoDlg_InitCombos(HWND hdlg) {
     SetWindowTextW(GetDlgItem(hdlg, IDC_TODO_DONE_BUTTON),
                    GetLocalizedString(L"\u5b8c\u6210", L"Done"));
     SetWindowTextW(GetDlgItem(hdlg, IDC_TODO_BOARD_SHOW),
-                   GetLocalizedString(L"\u663e\u793a\u4fbf\u7b7e",
-                                      L"Show sticky"));
+                   GetLocalizedString(L"\u663e\u793a\u9762\u677F",
+                                      L"Show panel")); /* RD1 */
+    SetWindowTextW(GetDlgItem(hdlg, IDC_TODO_SAVE_BUTTON),
+                   GetLocalizedString(L"\u4fdd\u5b58", L"Save")); /* RD9 */
     SetWindowTextW(GetDlgItem(hdlg, IDC_TODO_DELETE_BUTTON),
                    GetLocalizedString(L"\u5220\u9664", L"Delete"));
     SetWindowTextW(GetDlgItem(hdlg, IDCANCEL),

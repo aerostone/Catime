@@ -13,6 +13,7 @@
 #include "todo/todo_store.h"
 #include "todo/todo_sync.h"
 
+#include "dialog/dialog_todo.h"
 #include "dialog/dialog_todo_list_state.h"
 #include "todo/todo_conflict.h"
 
@@ -29,9 +30,10 @@ static TodoTask *SelectedTask(void) {
 }
 
 void TodoDlg_OnAdd(HWND hdlg) {
-    wchar_t wt[TODO_STORE_TITLE_LEN], wd[TODO_STORE_DATE_LEN];
+    wchar_t wt[TODO_STORE_TITLE_LEN];
+    char due[TODO_STORE_DATE_LEN] = "";
     GetDlgItemTextW(hdlg, IDC_TODO_NEW_EDIT, wt, _countof(wt));
-    GetDlgItemTextW(hdlg, IDC_TODO_NEW_DUE, wd, _countof(wd));
+    TodoDlg_GetDue(hdlg, due, sizeof(due)); /* RD8: date picker */
     if (!wt[0]) {
         MessageBoxW(hdlg,
             GetLocalizedString(L"\u8bf7\u8f93\u5165\u4efb\u52a1\u6807\u9898",
@@ -39,10 +41,8 @@ void TodoDlg_OnAdd(HWND hdlg) {
             GetLocalizedString(L"TODO", L"TODO"), MB_ICONINFORMATION);
         return;
     }
-    char title[TODO_STORE_TITLE_LEN] = "", due[TODO_STORE_DATE_LEN] = "";
+    char title[TODO_STORE_TITLE_LEN] = "";
     WideCharToMultiByte(CP_UTF8, 0, wt, -1, title, sizeof(title), NULL, NULL);
-    if (wd[0])
-        WideCharToMultiByte(CP_UTF8, 0, wd, -1, due, sizeof(due), NULL, NULL);
     LRESULT imp = SendDlgItemMessageW(hdlg, IDC_TODO_NEW_IMPORTANCE,
                                       CB_GETCURSEL, 0, 0);
     TodoImportance level = TODO_IMPORTANCE_NONE;
@@ -56,7 +56,7 @@ void TodoDlg_OnAdd(HWND hdlg) {
         strcpy_s(board, sizeof(board), TODO_BOARD_DEFAULT);
         MessageBoxW(hdlg,
             GetLocalizedString(
-                L"\u540c\u6b65\u4fbf\u7b3e\u53ea\u63a5\u6536\u670d\u52a1\u5668\u4efb\u52a1\uff0c\u5df2\u6539\u4e3a\u6dfb\u52a0\u5230\u672c\u5730\u4fbf\u7b3e",
+                L"\u540c\u6b65\u4efb\u52a1\u672c\u53ea\u63a5\u6536\u670d\u52a1\u5668\u4efb\u52a1\uff0c\u5df2\u6539\u4e3a\u6dfb\u52a0\u5230\u672c\u5730\u4efb\u52a1\u672c",
                 L"The sync board only receives server tasks; added locally"),
             L"TODO", MB_ICONINFORMATION);
     }
@@ -68,6 +68,11 @@ void TodoDlg_OnAdd(HWND hdlg) {
         return;
     }
     SetDlgItemTextW(hdlg, IDC_TODO_NEW_EDIT, L"");
+    { /* RD7: the new row stays visible and selected */
+        char nid[TODO_STORE_ID_LEN] = "";
+        TodoStore_LastAddedId(nid, sizeof(nid));
+        if (nid[0]) TodoDlg_Preselect(nid);
+    }
     TodoStickies_RefreshAll();
     TodoDlg_RefreshList(hdlg);
 }
@@ -108,6 +113,19 @@ void TodoDlg_OnDelete(HWND hdlg) {
     }
 }
 
+/* RD9: selecting a row fills the edit row (title/date/priority). */
+static void FillEditRow(HWND hdlg, const TodoTask *t) {
+    wchar_t w[TODO_STORE_TITLE_LEN];
+    MultiByteToWideChar(CP_UTF8, 0, t->title, -1, w, TODO_STORE_TITLE_LEN);
+    SetDlgItemTextW(hdlg, IDC_TODO_NEW_EDIT, w);
+    TodoDlg_SetDue(hdlg, t->dueDate); /* RD8: date picker */
+    int idx = t->importance == TODO_IMPORTANCE_HIGH ? 3 :
+              t->importance == TODO_IMPORTANCE_MEDIUM ? 2 :
+              t->importance == TODO_IMPORTANCE_LOW ? 1 : 0;
+    SendDlgItemMessageW(hdlg, IDC_TODO_NEW_IMPORTANCE, CB_SETCURSEL,
+                        (WPARAM)idx, 0);
+}
+
 void TodoDlg_OnSelect(HWND hdlg, int listIndex) {
     TodoDlgState *s = TodoDlg_State();
     if (!s) return;
@@ -125,9 +143,49 @@ void TodoDlg_OnSelect(HWND hdlg, int listIndex) {
         SendMessageW(list, LB_SETCURSEL, (WPARAM)-1, 0);
         return;
     }
-    if (listIndex >= 0 && listIndex < s->rowCount)
+    if (listIndex >= 0 && listIndex < s->rowCount) {
         s->selected = listIndex;
-    else
+        FillEditRow(hdlg, &s->rows[listIndex]); /* RD9 */
+    } else {
         s->selected = -1;
-    (void)hdlg;
+    }
+}
+
+/* RD9: save the edit row back into the selected task. */
+void TodoDlg_OnSaveEdit(HWND hdlg) {
+    TodoTask *t = SelectedTask();
+    if (!t) {
+        MessageBoxW(hdlg,
+            GetLocalizedString(L"\u5148\u9009\u62E9\u4E00\u4E2A\u4EFB\u52A1",
+                               L"Select a task first"),
+            L"TODO", MB_ICONINFORMATION);
+        return;
+    }
+    BOOL editable = (t->source == TODO_SOURCE_LOCAL ||
+                     (t->id[0] == 'C' && t->id[1] == ':'));
+    if (!editable) {
+        MessageBoxW(hdlg,
+            GetLocalizedString(L"\u8BE5\u884C\u4E3A\u53EA\u8BFB\u89C6\u56FE",
+                               L"This row is read-only"),
+            L"TODO", MB_ICONINFORMATION);
+        return;
+    }
+    wchar_t wt[TODO_STORE_TITLE_LEN];
+    char title[TODO_STORE_TITLE_LEN] = "", due[TODO_STORE_DATE_LEN] = "";
+    GetDlgItemTextW(hdlg, IDC_TODO_NEW_EDIT, wt, _countof(wt));
+    if (wt[0])
+        WideCharToMultiByte(CP_UTF8, 0, wt, -1, title, sizeof(title),
+                            NULL, NULL);
+    TodoDlg_GetDue(hdlg, due, sizeof(due)); /* RD8: date picker */
+    LRESULT imp = SendDlgItemMessageW(hdlg, IDC_TODO_NEW_IMPORTANCE,
+                                      CB_GETCURSEL, 0, 0);
+    TodoImportance level = TODO_IMPORTANCE_NONE;
+    if (imp == 1) level = TODO_IMPORTANCE_LOW;
+    else if (imp == 2) level = TODO_IMPORTANCE_MEDIUM;
+    else if (imp == 3) level = TODO_IMPORTANCE_HIGH;
+    if (title[0]) TodoStore_SetTitle(t->id, title);
+    TodoStore_SetDueDate(t->id, due);
+    TodoStore_SetImportance(t->id, level);
+    TodoStickies_RefreshAll();
+    TodoDlg_RefreshList(hdlg);
 }

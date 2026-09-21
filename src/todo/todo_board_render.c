@@ -101,14 +101,20 @@ void TodoBoard_PaintTitle(HDC hdc, const RECT *rc, const char *board,
     DrawTextW(hdc, wbuf, -1, &tx,
               DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS |
                   DT_NOPREFIX);
-    /* right-hand glyphs: fold, list (hide moved to card menu, N4) */
+    /* right-hand buttons (RD6): explicit fold/unfold + open-manager.
+     * Glyphs are drawn centered in their 26px hit zones. */
     SetTextColor(hdc, COL_TEXT);
     int right = bar.right;
-    const wchar_t *gFold = collapsed ? L"\u25A2" : L"\u2013";
-    TextOutW(hdc, right - BOARD_HIT_LIST - BOARD_HIT_FOLD + 4,
-             bar.top + 6, gFold, (int)wcslen(gFold));
-    TextOutW(hdc, right - BOARD_HIT_LIST + 4, bar.top + 6,
-             L"\u2261", 1);
+    {
+        const wchar_t *gFold = collapsed ? L"\u25A2" : L"\u2013";
+        int cx = right - BOARD_HIT_LIST - BOARD_HIT_FOLD +
+                 BOARD_HIT_FOLD / 2 - 5;
+        TextOutW(hdc, cx, bar.top + 8, gFold, (int)wcslen(gFold));
+    }
+    {
+        int cx = right - BOARD_HIT_LIST + BOARD_HIT_LIST / 2 - 5;
+        TextOutW(hdc, cx, bar.top + 8, L"\u2261", 1);
+    }
     HPEN pen = CreatePen(PS_SOLID, 1, COL_LINE);
     if (pen) {
         HPEN old = (HPEN)SelectObject(hdc, pen);
@@ -117,6 +123,31 @@ void TodoBoard_PaintTitle(HDC hdc, const RECT *rc, const char *board,
         SelectObject(hdc, old);
         DeleteObject(pen);
     }
+}
+
+/* --- minimized dot (RD6): translucent 52px dot tinted by peak
+ * importance; the count rides inside so nothing else is needed. ---- */
+void TodoBoard_PaintDot(HDC hdc, const RECT *rc, TodoImportance peak,
+                        int openCount) {
+    COLORREF fill;
+    TodoBoard_BarColor(peak, FALSE, &fill);
+    HBRUSH b = CreateSolidBrush(fill);
+    HPEN pen = CreatePen(PS_SOLID, 2, COL_LINE);
+    HBRUSH oldB = NULL;
+    HPEN oldP = NULL;
+    if (b) oldB = (HBRUSH)SelectObject(hdc, b);
+    if (pen) oldP = (HPEN)SelectObject(hdc, pen);
+    Ellipse(hdc, rc->left + 2, rc->top + 2, rc->right - 2, rc->bottom - 2);
+    if (oldB) SelectObject(hdc, oldB);
+    if (oldP) SelectObject(hdc, oldP);
+    if (b) DeleteObject(b);
+    if (pen) DeleteObject(pen);
+    wchar_t wnum[16];
+    _snwprintf_s(wnum, 16, _TRUNCATE, L"%d", openCount);
+    SetBkMode(hdc, TRANSPARENT);
+    SetTextColor(hdc, COL_TEXT);
+    DrawTextW(hdc, wnum, -1, (LPRECT)rc,
+              DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
 }
 
 /* --- filter row ----------------------------------------------------- */

@@ -34,6 +34,12 @@ LRESULT CmdTodoShowAll(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
+LRESULT CmdTodoBooks(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)wp; (void)lp;
+    ShowTodoBooksDialog(hwnd); /* RD3/RD4: task-book manager */
+    return 0;
+}
+
 LRESULT CmdTodoSettings(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     ShowTodoSettingsDialog(hwnd);

@@ -37,6 +37,10 @@ void TodoDlg_PersistScope(HWND hdlg, TodoDueScope scope);
 void TodoDlg_OnAdd(HWND hdlg);
 void TodoDlg_OnToggleDone(HWND hdlg);
 void TodoDlg_OnDelete(HWND hdlg);
+void TodoDlg_OnSaveEdit(HWND hdlg); /* RD9 */
+/* dialog_todo_duepick.c: DTS_SHOWNONE picker (unchecked = no date). */
+void TodoDlg_GetDue(HWND hdlg, char *out, size_t cap);
+void TodoDlg_SetDue(HWND hdlg, const char *dueDate);
 void TodoDlg_OnSelect(HWND hdlg, int listIndex);
 
 #endif /* CATIME_DIALOG_TODO_PARTS_H */

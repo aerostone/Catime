@@ -17,5 +17,6 @@ void ShowTodoListDialogForNew(HWND hwndParent);
 void TodoDlg_Preselect(const char *taskId);
 void TodoDlg_ReadFilter(HWND hdlg, TodoFilter *f);
 void ShowTodoSettingsDialog(HWND hwndParent);
+void ShowTodoBooksDialog(HWND hwndParent); /* RD3: task-book manager */
 
 #endif /* CATIME_DIALOG_TODO_H */

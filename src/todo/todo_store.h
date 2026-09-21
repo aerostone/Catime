@@ -28,6 +28,8 @@ BOOL TodoStore_AddTo(const char *title, TodoImportance imp, const char *dueDate,
                      const char *board);
 BOOL TodoStore_SetDone(const char *id, BOOL done);
 BOOL TodoStore_Remove(const char *id);
+BOOL TodoStore_SetTitle(const char *id, const char *title); /* RD9 */
+void TodoStore_LastAddedId(char *out, size_t cap); /* RD7 */
 BOOL TodoStore_SetImportance(const char *id, TodoImportance imp);
 BOOL TodoStore_SetDueDate(const char *id, const char *dueDate);
 BOOL TodoStore_SetPinned(const char *id, BOOL pinned);

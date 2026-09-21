@@ -71,6 +71,7 @@ int TodoSticky_LoadBoardTasks(const char *board, TodoTask *out, int cap);
 int TodoSticky_PomoRemainingFor(const char *board);
 /* task id of a visible row ("" when empty). */
 int TodoSticky_RowIdAt(const char *board, int row, char *out, size_t cap);
+TodoImportance TodoSticky_PeakImportance(const char *board);
 int TodoSticky_RowCount(const char *board);
 /* todo_sticky_rowmenu.c */
 void TodoSticky_ShowRowMenu(HWND hwnd, StickyWin *sw, int row);

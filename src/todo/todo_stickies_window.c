@@ -41,7 +41,7 @@ void TodoSticky_SetCollapsedUI(HWND hwnd, StickyWin *sw, BOOL collapsed) {
     }
     TodoBoard_SetCollapsed(sw->board, collapsed);
     sw->collapsed = collapsed;
-    if (sw->edit) ShowWindow(sw->edit, collapsed ? SW_HIDE : SW_SHOW);
+    TodoSticky_ApplyOpacity(hwnd); /* RD6: dot vs card alpha */
     SetWindowPos(hwnd, NULL, wr.left, wr.top, w, h,
                  SWP_NOZORDER | SWP_NOACTIVATE);
     TodoSticky_UpdateTips(hwnd, collapsed);
@@ -98,9 +98,10 @@ LRESULT CALLBACK StickyProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                                       sw->selId,
                                       sw->hoverRow < n ? sw->hoverRow : -1);
         } else if (sw) {
-            TodoBoard_PaintTitle(hdc, &rc, sw->board,
-                                 TodoBoard_OpenCount(sw->board), TRUE, 0,
-                                 sw->fTitle);
+            /* RD6: minimized = translucent dot, no title bar. */
+            TodoBoard_PaintDot(hdc, &rc,
+                               TodoSticky_PeakImportance(sw->board),
+                               TodoBoard_OpenCount(sw->board));
         }
         TodoSticky_PaintFocus(hdc, &rc, sw, hwnd);
         EndPaint(hwnd, &ps);
@@ -137,12 +138,9 @@ LRESULT CALLBACK StickyProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             return 0;
         }
         if (y <= BOARD_BAR_H + BOARD_FILTER_H) {
+            /* RD2/RD5: filter row is scope-toggle only; new tasks are
+             * added in the task manager dialog. */
             if (x < 4 + BOARD_HIT_SCOPE_W) ToggleScope(sw);
-            else if (x >= 4 + BOARD_HIT_SCOPE_W + 4) {
-                RECT rc;
-                GetClientRect(hwnd, &rc);
-                if (x >= rc.right - 4 - BOARD_HIT_ADD_W) OpenList(sw, TRUE);
-            }
             return 0;
         }
         /* N1: click selects; completion needs dblclick or the menu. */
@@ -229,15 +227,14 @@ LRESULT CALLBACK StickyProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         }
         return 0;
     case WM_LBUTTONDBLCLK: {
+        /* RD6: double-click no longer folds; rows still dblclick-toggle
+         * done, everywhere else dblclick is a no-op (fold button only). */
         if (!sw) break;
         int y = GET_Y_LPARAM(lp);
         int row = (y > BOARD_BAR_H + BOARD_FILTER_H)
                       ? BoardLayout_RowAt(y)
                       : -1;
-        if (row >= 0)
-            TodoSticky_ToggleSelected(sw);
-        else
-            TodoSticky_SetCollapsedUI(hwnd, sw, !sw->collapsed);
+        if (row >= 0) TodoSticky_ToggleSelected(sw);
         return 0;
     }
     case WM_RBUTTONUP: {
@@ -253,36 +250,18 @@ LRESULT CALLBACK StickyProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             TodoSticky_ShowRowMenu(hwnd, sw, BoardLayout_RowAt(y));
         return 0;
     }
-    case WM_COMMAND: {
-        WORD id = LOWORD(wp), code = HIWORD(wp);
-        if (sw && id == STICKY_EDIT_ID && code == EN_CHANGE) {
-            /* debounce: persist the keyword once typing pauses */
-            KillTimer(hwnd, STICKY_TIMER_KW);
-            SetTimer(hwnd, STICKY_TIMER_KW, 300, NULL);
-        }
+    case WM_COMMAND:
         return 0;
-    }
     case WM_TIMER:
         if (wp == STICKY_TIMER_POMO) {
             if (!TodoStickyPomo_Validate() || TodoStickyPomo_Remaining() <= 0)
                 KillTimer(hwnd, STICKY_TIMER_POMO);
-            TodoSticky_Repaint(sw);
-        } else if (wp == STICKY_TIMER_KW && sw && sw->edit) {
-            KillTimer(hwnd, STICKY_TIMER_KW);
-            wchar_t wkw[TODO_STORE_TITLE_LEN];
-            GetWindowTextW(sw->edit, wkw, TODO_STORE_TITLE_LEN);
-            char kw[TODO_STORE_TITLE_LEN * 2];
-            WideCharToMultiByte(CP_UTF8, 0, wkw, -1, kw, sizeof(kw), NULL,
-                                NULL);
-            TodoBoard_SetKeyword(sw->board, kw);
             TodoSticky_Repaint(sw);
         }
         return 0;
     case WM_DESTROY:
         if (sw) {
             KillTimer(hwnd, STICKY_TIMER_POMO);
-            KillTimer(hwnd, STICKY_TIMER_KW);
-            if (sw->edit) DestroyWindow(sw->edit);
             if (sw->fTitle) DeleteObject(sw->fTitle);
             if (sw->fBody) DeleteObject(sw->fBody);
             sw->used = FALSE;
