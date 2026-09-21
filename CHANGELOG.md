@@ -4,6 +4,43 @@ All notable changes to this fork (`aerostone/Catime`) are documented here.
 Upstream releases live under `vladelaina/Catime`; see that repository for
 history before the fork point.
 
+## [v1.6.8] - 2026-09-21
+
+Task-book rework: 便签 becomes 任务本, bigger cards, a dedicated
+manager, date pickers, and select-to-edit.
+
+### Added
+- Task-book manager dialog (任务本管理): book list + New/Rename/Del
+  + show/hide panel + Sync Now + jump to sync settings. All
+  book-level controls move here; the tray and task manager keep
+  only per-task navigation and editing.
+- Date picker (SysDateTimePick32, DTS_SHOWNONE) for the task due
+  date and the task-list range start/end; empty checkbox means no
+  bound, no more YYYY-MM-DD typing.
+- Save button in the task manager: selecting a row refills the edit
+  row (title + due + priority) and Save writes back. New tasks are
+  auto-preselected after adding.
+- Minimized cards render as a 52px semi-transparent dot (alpha 140)
+  tinted by peak open-task importance with the open count centered.
+
+### Changed
+- All UI copy: 便签 -> 任务本 / TODO panels; English Stickies ->
+  Task books / Show panel.
+- Board cards +30%: title bar 30->39px, filter row 26->34px,
+  task rows 22->29px, default card 320x260 -> 416x338, title font
+  -16 -> -21, body -14 -> -18.
+- Tray TODO menu: task rows, New Task, settings, and Sync Now are
+  gone — only 任务管理 / 任务本管理 / 显示任务本 plus the
+  sync-state and conflict rows remain.
+- Double-click collapse is gone; only the title-bar fold button
+  collapses, and row double-click toggles done.
+- In-card search box removed; the filter row keeps this-week/all
+  toggle and the add shortcut.
+- Task-list scope: Week/Month no longer persist into the card; new
+  tasks no longer trigger a fake Custom scope.
+- MinGW release size budget 1180 -> 1200 KiB for the new dialog,
+  picker, and dot paint code.
+
 ## [v1.6.7] - 2026-09-21
 
 Single-editor cleanup: the sticky card selects instead of completing,
