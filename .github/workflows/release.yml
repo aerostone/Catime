@@ -236,6 +236,21 @@ jobs:
           echo "configured=true" >> "$GITHUB_OUTPUT"
         fi
 
+    - name: Extract changelog entry for this version
+      id: changelog
+      run: |
+        python3 - <<'EOF' >> "$GITHUB_OUTPUT"
+        import re
+        tag = "${{ needs.build.outputs.tag_version }}"
+        text = open("CHANGELOG.md", encoding="utf-8").read()
+        m = re.search(r"^## \[v?" + re.escape(tag) + r"\].*?(?=^## \[v?|\Z)",
+                      text, re.M | re.S)
+        entry = m.group(0).strip() if m else "(CHANGELOG.md has no entry for v%s)" % tag
+        print("entry<<CHLOG_EOF")
+        print(entry)
+        print("CHLOG_EOF")
+        EOF
+
     - name: Create GitHub Release
       id: create_release
       uses: softprops/action-gh-release@v3.0.2
@@ -243,37 +258,13 @@ jobs:
         files: ./signed-release/catime_${{ needs.build.outputs.tag_version }}.exe
         name: ${{ github.ref_name }}
         body: |
-          # Changelog
-
-          > [!TIP]
-          > My friend, while downloading Catime, why not check out my friend's [Easy-Cat-Timer](https://github.com/xujiangjiang/Easy-Cat-Timer) - a super cute and practical countdown timer!
+          ${{ steps.changelog.outputs.entry }}
 
           ---
-          # 📥 Download
 
-          <a href="https://apps.microsoft.com/detail/9n3mzdf1z34v?referrer=appbadge&mode=full" target="_blank" rel="noopener noreferrer">
-            <img src="https://get.microsoft.com/images/en-us%20light.svg" width="600"/>
-          </a>
+          ### Install
 
-          ### Chocolatey
-
-            ```
-            choco install catime
-            ```
-
-          ### Scoop
-
-            ```
-            scoop bucket add extras
-
-            scoop install catime
-            ```
-
-          ### Winget
-
-            ```
-            winget install --id VladElaina.Catime
-            ```
+          Download `catime_${{ needs.build.outputs.tag_version }}.exe` below.
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
