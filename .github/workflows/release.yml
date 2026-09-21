@@ -218,6 +218,11 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+      with:
+        ref: ${{ github.ref }}
+
     - name: Download release executable (signed preferred, unsigned fallback)
       uses: actions/download-artifact@v8
       with:
