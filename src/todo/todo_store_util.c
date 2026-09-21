@@ -2,6 +2,9 @@
  * @file todo_store_util.c
  * @brief Date helpers for the store (split to respect the 300-line gate).
  */
+#include <stdio.h>
+#include <string.h>
+
 #include "todo_store_util.h"
 
 void TodoStore_TodayStr(char *out, size_t cap) {
