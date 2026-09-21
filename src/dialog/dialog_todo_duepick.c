@@ -6,6 +6,7 @@
  * the 300-line gate.
  */
 #include <windows.h>
+#include <commctrl.h> /* DTM_*/GDT_* for SysDateTimePick32 */
 #include <stdio.h>
 
 #include "../../resource/resource.h"

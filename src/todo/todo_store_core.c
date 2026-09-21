@@ -24,6 +24,7 @@ static int s_count = 0;
 static char s_iniPath[MAX_PATH] = "";
 static char s_txtPath[MAX_PATH] = "";
 static long s_nextId = 1;
+static char s_lastAddedId[TODO_STORE_ID_LEN] = "";
 
 void TodoStore_Lock(void) { EnterCriticalSection(&s_lock); }
 void TodoStore_Unlock(void) { LeaveCriticalSection(&s_lock); }
@@ -134,7 +135,6 @@ BOOL TodoStore_Init(const wchar_t *configIniPath) {
 }
 
 void TodoStore_Shutdown(void) {
-    /* lock intentionally kept (process-lifetime); nothing to free */
 }
 
 static long long StampNow(void) {

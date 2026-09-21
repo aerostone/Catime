@@ -5,6 +5,7 @@
  * Split from dialog_todo_list.c to respect the 300-line gate.
  */
 #include <windows.h>
+#include <commctrl.h> /* DTM_SETSYSTEMTIME for the due picker init */
 #include <stdio.h>
 
 #include "../../resource/resource.h"
