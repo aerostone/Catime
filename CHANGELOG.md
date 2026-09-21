@@ -4,6 +4,35 @@ All notable changes to this fork (`aerostone/Catime`) are documented here.
 Upstream releases live under `vladelaina/Catime`; see that repository for
 history before the fork point.
 
+## [v1.6.7] - 2026-09-21
+
+Single-editor cleanup: the sticky card selects instead of completing,
+the board menu hides behind `...`, and the tray menu gets slimmer.
+
+### Fixed
+- Sticky card: single click now selects a row (+hover band, focus rect);
+  done needs double-click, row menu, or Space/Enter — no more
+  accidental completions, and nothing syncs outward by mistake.
+- Sticky card: rows that overflow the card paint a
+  `...还有 n 项，双击打开列表` hint instead of silently clipping.
+- Row menu: removed the fake date/importance "editors" that jumped to
+  the list dialog; added an honest `在列表中编辑...` entry.
+- Title bar: hide leaves the bar (card menu only, tasks kept) — no
+  more one-click accidental hides or close-X confusion.
+- Card keyboard support: arrows move selection, Space/Enter toggles
+  done, Esc hides the card.
+- Title glyph wording: pin tips and card menu are honest about
+  show/hide semantics.
+- Task-list dialog: New/Rename/Del board buttons collapse into a `...`
+  manage menu; sync board disables the Add row (read-only) instead of
+  scolding with a modal.
+- Tray: Top5 -> Top3 + `更多 (n)项...` overflow, sync status merges
+  into Sync Now (`Sync Now · 同步·正常 12:03`).
+- Overdue marks: `[!]` is now independent of `[A]` importance; tray,
+  list, and card share one `TodoTask_IsOverdue` predicate.
+- Pomodoro label on cards reads `番茄 MM:SS` (localized).
+- MinGW: doubled backslash in the tray overflow label.
+
 ## [v1.6.6] - 2026-09-21
 
 Sticky boards: one desktop card per task board, rebuilt task-list dialog,
