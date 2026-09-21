@@ -108,7 +108,7 @@ void BuildTodoMenu(HMENU hMenu) {
     if (open > show) {
         wchar_t more[96];
         _snwprintf_s(more, _countof(more), _TRUNCATE,
-                     L"\uu66F4\uu591A (%d)\u9879...", open - show);
+                     L"\u66F4\u591A (%d)\u9879...", open - show);
         AppendMenuW(hTodo, MF_STRING, CLOCK_IDM_TODO_LIST, more);
     }
     if (n > 0) AppendMenuW(hTodo, MF_SEPARATOR, 0, NULL);
