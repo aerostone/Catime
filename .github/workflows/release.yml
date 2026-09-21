@@ -238,18 +238,16 @@ jobs:
 
     - name: Extract changelog entry for this version
       id: changelog
+      shell: python
       run: |
-        python3 - <<'EOF' >> "$GITHUB_OUTPUT"
-        import re
+        import os, re
         tag = "${{ needs.build.outputs.tag_version }}"
         text = open("CHANGELOG.md", encoding="utf-8").read()
         m = re.search(r"^## \[v?" + re.escape(tag) + r"\].*?(?=^## \[v?|\Z)",
                       text, re.M | re.S)
         entry = m.group(0).strip() if m else "(CHANGELOG.md has no entry for v%s)" % tag
-        print("entry<<CHLOG_EOF")
-        print(entry)
-        print("CHLOG_EOF")
-        EOF
+        with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+            f.write("entry<<CHLOG_EOF\n" + entry + "\nCHLOG_EOF\n")
 
     - name: Create GitHub Release
       id: create_release
