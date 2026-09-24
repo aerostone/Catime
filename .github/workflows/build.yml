@@ -263,7 +263,16 @@ jobs:
                   $env:EVENT_BEFORE -match '^0+$') {
                 $runAnalyzer = $true
               } else {
-                $diffRange = "$($env:EVENT_BEFORE)..$($env:CURRENT_SHA)"
+                # Force-push / history rewrite: the before SHA may no longer be
+                # reachable from this checkout, so diff-based scoping is
+                # impossible. Fall back to a full analyzer run (conservative).
+                git cat-file -e "$($env:EVENT_BEFORE)^{commit}" 2>$null
+                if ($LASTEXITCODE -ne 0) {
+                  Write-Output "before SHA $env:EVENT_BEFORE not present in checkout (force-push?); running full analyzer"
+                  $runAnalyzer = $true
+                } else {
+                  $diffRange = "$($env:EVENT_BEFORE)..$($env:CURRENT_SHA)"
+                }
               }
             }
             "pull_request" {
