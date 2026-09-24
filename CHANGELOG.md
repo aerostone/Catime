@@ -4,6 +4,37 @@ All notable changes to this fork (`aerostone/Catime`) are documented here.
 Upstream releases live under `vladelaina/Catime`; see that repository for
 history before the fork point.
 
+## [v1.6.9] - 2026-09-22
+
+Editing a row now syncs back to tweek, both ways.
+
+### Added
+- Row-level edits (title / due date / priority), done toggles and
+  deletes on the sync book are pushed back to tweek. New tasks added
+  while the sync book is selected are created on tweek instead of
+  being rerouted to the local book.
+- The server returns an authoritative timestamp for every row a push
+  touched; the local side adopts it, so a skewed local clock can
+  neither win forever nor silently drop later remote edits.
+
+### Fixed
+- The push guard compared the todo.txt mtime, and the pull rewrites
+  that same file — every poll therefore pushed back rows the server
+  had just sent and wrote a conflict snapshot each time. The guard now
+  compares the payload itself.
+- Sync rows and the sync book were read-only, so edits raised "this
+  row is a read-only view" and never reached tweek.
+- Edit timestamps are monotonic now: a row pulled with a server stamp
+  always gets a strictly newer stamp when edited locally.
+- tweek: updated_after=0 means a full first sync (a new device used to
+  receive nothing), the cursor compare is >= so changes made in the
+  same second as the previous server_time are not skipped, and a
+  full page advances the cursor to the last row so backlogs beyond
+  200 rows drain over successive polls.
+- The sync worker now runs with a 4 MiB stack and keeps the push body
+  out of the stack — the first full sync holds both 200-row passes at
+  once.
+
 ## [v1.6.8] - 2026-09-21
 
 Task-book rework: 便签 becomes 任务本, bigger cards, a dedicated
