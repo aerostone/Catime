@@ -4,6 +4,7 @@
  */
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "todo_store_util.h"
 
@@ -22,4 +23,13 @@ BOOL TodoStore_ValidDate(const char *d) {
         if (d[i] < '0' || d[i] > '9') return FALSE;
     }
     return TRUE;
+}
+
+/* Monotonic edit stamp: always strictly newer than the previous value of
+ * the same row. For a pulled row the previous value is the server stamp,
+ * so a local edit is guaranteed to win the server's newer-wins compare
+ * even when the local clock lags the server's. */
+long long TodoStore_StampNext(long long prev) {
+    long long now = (long long)time(NULL);
+    return now > prev ? now : prev + 1;
 }

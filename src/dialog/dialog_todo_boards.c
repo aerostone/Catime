@@ -45,21 +45,28 @@ void TodoDlg_GetBoard(HWND hdlg, char *out, size_t cap) {
     WideCharToMultiByte(CP_UTF8, 0, w, -1, out, (int)cap, NULL, NULL);
 }
 
-/* L2: sync board is pull-only - the Add row is visibly disabled. */
+/* The sync book is bidirectional now: its rows are editable and a new
+ * task added here is created on tweek by the next push. The cue below just
+ * states that, so the add row stays enabled on every book. */
 static void SyncAddRowGate(HWND hdlg) {
     char b[TODO_STORE_BOARD_LEN];
     TodoDlg_GetBoard(hdlg, b, sizeof(b));
     BOOL sync = (strcmp(b, TODO_BOARD_SYNC) == 0);
-    EnableWindow(GetDlgItem(hdlg, IDC_TODO_NEW_EDIT), !sync);
-    EnableWindow(GetDlgItem(hdlg, IDC_TODO_NEW_DUE), !sync);
-    EnableWindow(GetDlgItem(hdlg, IDC_TODO_NEW_IMPORTANCE), !sync);
-    EnableWindow(GetDlgItem(hdlg, IDC_TODO_ADD_BUTTON), !sync);
-    if (sync)
-        SetDlgItemTextW(hdlg, IDC_TODO_NEW_EDIT,
-            GetLocalizedString(L"\u540C\u6B65\u677F\u53EA\u8BFB\uFF0C\u8BF7\u5207\u6362\u5230\u672C\u5730\u677F\u6DFB\u52A0",
-                               L"Sync board is read-only"));
-    else if (!GetWindowTextLengthW(GetDlgItem(hdlg, IDC_TODO_NEW_EDIT)))
+    EnableWindow(GetDlgItem(hdlg, IDC_TODO_NEW_EDIT), TRUE);
+    EnableWindow(GetDlgItem(hdlg, IDC_TODO_NEW_DUE), TRUE);
+    EnableWindow(GetDlgItem(hdlg, IDC_TODO_NEW_IMPORTANCE), TRUE);
+    EnableWindow(GetDlgItem(hdlg, IDC_TODO_ADD_BUTTON), TRUE);
+    if (sync) {
+        wchar_t cur[TODO_STORE_TITLE_LEN];
+        GetDlgItemTextW(hdlg, IDC_TODO_NEW_EDIT, cur, _countof(cur));
+        if (!cur[0])
+            SetDlgItemTextW(hdlg, IDC_TODO_NEW_EDIT,
+                GetLocalizedString(
+                    L"\u5728\u6B64\u65B0\u5EFA\u5C06\u521B\u5EFA\u5230 tweek\uFF08\u4E0B\u6B21\u540C\u6B65\uFF09",
+                    L"New task here is created on tweek (next sync)"));
+    } else if (!GetWindowTextLengthW(GetDlgItem(hdlg, IDC_TODO_NEW_EDIT))) {
         SetDlgItemTextW(hdlg, IDC_TODO_NEW_EDIT, L"");
+    }
 }
 
 void TodoDlg_RefreshAddGate(HWND hdlg) { SyncAddRowGate(hdlg); }

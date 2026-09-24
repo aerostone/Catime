@@ -16,8 +16,12 @@
 #include "todo/todo_conflict.h"
 #include "todo/todo_stickies.h"
 #include "todo/todo_sync.h"
+#include "todo/todo_sync_internal.h"
 #include "todo/todo_sync_status.h"
+#include "todo/todo_task_sync.h"
 #include "window_procedure/window_helpers.h"
+
+static void RefreshSyncCalCombo(HWND hdlg); /* fwd (#28b) */
 
 static void RefreshList(HWND hdlg) {
     HWND list = GetDlgItem(hdlg, IDC_TODO_BOOKS_LIST);
@@ -42,6 +46,64 @@ static void RefreshList(HWND hdlg) {
     wchar_t st[96];
     TodoSyncStatus_Label(st, _countof(st));
     SetDlgItemTextW(hdlg, IDC_TODO_BOOK_STATUS, st);
+    RefreshSyncCalCombo(hdlg); /* #28b */
+}
+
+/* #28b: sync-book picker. Options come from the last pull; the choice
+ * (tweek calendar id) persists in [Sync] CalendarId and re-pulls. */
+static TaskSyncCal s_syncCals[32];
+static int s_syncCalCount = 0;
+
+static void RefreshSyncCalCombo(HWND hdlg) {
+    HWND cb = GetDlgItem(hdlg, IDC_TODO_BOOK_SYNC_CAL);
+    if (!cb) return;
+    char cur[TODO_STORE_UUID_LEN] = "";
+    TodoSync_GetCalendarId(cur, sizeof(cur));
+    SendMessageW(cb, CB_RESETCONTENT, 0, 0);
+    BOOL en = FALSE;
+    char server[TODO_URL_LEN] = "", token[TODO_TOKEN_LEN] = "";
+    int poll = 60;
+    TodoSync_GetSettings(&en, server, sizeof(server), token, sizeof(token),
+                         &poll);
+    int sel = -1, n = 0;
+    if (en && server[0] && token[0]) {
+        char url[TODO_URL_LEN + 64];
+        _snprintf_s(url, sizeof(url), _TRUNCATE, "%s/api/catime/sync?top=1",
+                    server);
+        char *resp = TodoSyncHttp_Get(url, token);
+        if (resp) {
+            n = TaskSync_ParseCalendars(resp, s_syncCals, 32);
+            s_syncCalCount = n;
+            for (int i = 0; i < n; i++) {
+                wchar_t w[TODO_STORE_BOARD_LEN];
+                MultiByteToWideChar(CP_UTF8, 0, s_syncCals[i].name[0] ? s_syncCals[i].name : s_syncCals[i].id,
+                                    -1, w, TODO_STORE_BOARD_LEN);
+                int idx = (int)SendMessageW(cb, CB_ADDSTRING, 0, (LPARAM)w);
+                if (cur[0] && strcmp(s_syncCals[i].id, cur) == 0) sel = idx;
+            }
+            free(resp);
+        }
+    }
+    if (sel < 0 && n > 0 && !cur[0]) sel = 0; /* first run: default first */
+    if (sel >= 0) SendMessageW(cb, CB_SETCURSEL, (WPARAM)sel, 0);
+    if (n == 0 && cur[0]) {
+        /* offline: show the stored id so the choice stays visible */
+        wchar_t w[TODO_STORE_UUID_LEN];
+        MultiByteToWideChar(CP_UTF8, 0, cur, -1, w, TODO_STORE_UUID_LEN);
+        SendMessageW(cb, CB_ADDSTRING, 0, (LPARAM)w);
+        SendMessageW(cb, CB_SETCURSEL, 0, 0);
+    }
+    EnableWindow(cb, n > 0);
+}
+
+/* #28b: picking a book persists CalendarId and re-pulls under it. */
+static void OnSyncCalChanged(HWND hdlg) {
+    HWND cb = GetDlgItem(hdlg, IDC_TODO_BOOK_SYNC_CAL);
+    if (!cb) return;
+    int idx = (int)SendMessageW(cb, CB_GETCURSEL, 0, 0);
+    if (idx < 0 || idx >= s_syncCalCount) return;
+    TodoSync_SetCalendarId(s_syncCals[idx].id);
+    RefreshList(hdlg);
 }
 
 static BOOL SelName(HWND hdlg, char *out, size_t cap) {
@@ -154,6 +216,7 @@ static INT_PTR CALLBACK BooksProc(HWND hdlg, UINT msg, WPARAM wp,
         return TRUE;
     case WM_COMMAND: {
         WORD id = LOWORD(wp);
+        WORD code = HIWORD(wp);
         if (id == IDOK || id == IDCANCEL) {
             DestroyWindow(hdlg);
             return TRUE;
@@ -162,6 +225,10 @@ static INT_PTR CALLBACK BooksProc(HWND hdlg, UINT msg, WPARAM wp,
         if (id == IDC_TODO_BOOK_RENAME) { OnRename(hdlg); return TRUE; }
         if (id == IDC_TODO_BOOK_DEL) { OnDelete(hdlg); return TRUE; }
         if (id == IDC_TODO_BOOK_SHOW) { OnShow(hdlg); return TRUE; }
+        if (id == IDC_TODO_BOOK_SYNC_CAL && code == CBN_SELCHANGE) {
+            OnSyncCalChanged(hdlg);
+            return TRUE;
+        }
         if (id == IDC_TODO_BOOK_SYNC_NOW) {
             TodoSync_PollNow();
             RefreshList(hdlg);

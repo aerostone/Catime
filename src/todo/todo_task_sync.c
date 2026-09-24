@@ -74,6 +74,8 @@ static void FillItem(const char *slice, TaskSyncItem *t) {
     TodoSyncJson_ExtractStr(slice, "date", t->date, sizeof(t->date));
     TodoSyncJson_ExtractStr(slice, "due_date", t->dueDate, sizeof(t->dueDate));
     char status[16] = "";
+    TodoSyncJson_ExtractStr(slice, "calendar_id", t->calendarId,
+                            sizeof(t->calendarId)); /* #28a/28b */
     TodoSyncJson_ExtractStr(slice, "status", status, sizeof(status));
     t->done = strcmp(status, "done") == 0;
     char del[16] = "";
@@ -107,29 +109,55 @@ int TaskSync_ParsePull(const char *json, TaskSyncItem *out, int cap,
     return n;
 }
 
-void TaskSync_BuildPush(const TodoTask *tasks, int count,
-                        const char deleted[][TODO_STORE_ID_LEN], int delCount,
-                        char *dst, size_t cap) {
+int TaskSync_ParseCalendars(const char *json, TaskSyncCal *out, int cap) {
+    if (!json || !out || cap <= 0) return 0;
+    const char *cur = NULL;
+    if (!FindArrayObjects(json, "calendars", &cur)) return 0;
+    int n = 0;
+    char slice[512];
+    while (n < cap && NextObject(&cur, slice, sizeof(slice))) {
+        memset(&out[n], 0, sizeof(out[n]));
+        TodoSyncJson_ExtractStr(slice, "id", out[n].id, sizeof(out[n].id));
+        TodoSyncJson_ExtractStr(slice, "name", out[n].name,
+                                sizeof(out[n].name));
+        if (out[n].id[0]) n++;
+    }
+    return n;
+}
+
+
+void TaskSync_BuildPushEx(const TodoTask *tasks, int count,
+                          const char deleted[][TODO_STORE_ID_LEN], int delCount,
+                          const char *calendarId, char *dst, size_t cap) {
     if (!dst || cap == 0) return;
     dst[0] = '\0';
     size_t w = 0;
-    w += _snprintf_s(dst + w, cap - w, _TRUNCATE, "{\"tasks\":[");
+    char ecal[TODO_STORE_UUID_LEN + 8];
+    JsonEscape(calendarId ? calendarId : "", ecal, sizeof(ecal));
+    w += _snprintf_s(dst + w, cap - w, _TRUNCATE,
+                     "{\"calendar_id\":\"%s\",\"tasks\":[", ecal);
     for (int i = 0; i < count && tasks; i++) {
         const TodoTask *t = &tasks[i];
         char et[TODO_STORE_TITLE_LEN * 2], ed[32], edue[32];
         JsonEscape(t->title, et, sizeof(et));
         JsonEscape(t->createdAt, ed, sizeof(ed));
         JsonEscape(t->dueDate, edue, sizeof(edue));
-        char esrv[TODO_STORE_UUID_LEN + 8];
+        char esrv[TODO_STORE_UUID_LEN + 8], ecalRow[TODO_STORE_UUID_LEN + 8];
         JsonEscape(t->serverId, esrv, sizeof(esrv));
+        /* row-level calendar_id only for rows the server has not seen yet:
+         * a row already on the server keeps its own book, so changing the
+         * selected sync book never mass-moves existing rows. */
+        JsonEscape(t->serverId[0] ? "" : (calendarId ? calendarId : ""),
+                   ecalRow, sizeof(ecalRow));
         w += _snprintf_s(dst + w, cap - w, _TRUNCATE,
                          "%s{\"client_id\":\"%s\",\"server_id\":\"%s\","
                          "\"title\":\"%s\","
                          "\"date\":\"%s\",\"due_date\":\"%s\","
-                         "\"priority\":%d,\"status\":\"%s\",\"updated_at\":%lld}",
+                         "\"priority\":%d,\"status\":\"%s\",\"updated_at\":%lld,"
+                         "\"calendar_id\":\"%s\"}",
                          i ? "," : "", t->id, esrv, et, ed, edue,
                          (int)t->importance, t->done ? "done" : "open",
-                         t->updatedAt);
+                         t->updatedAt, ecalRow);
         if (w + 1 >= cap) break;
     }
     w += _snprintf_s(dst + w, cap - w, _TRUNCATE, "],\"deleted\":[");
@@ -139,6 +167,12 @@ void TaskSync_BuildPush(const TodoTask *tasks, int count,
         if (w + 1 >= cap) break;
     }
     _snprintf_s(dst + w, cap - w, _TRUNCATE, "]}");
+}
+
+void TaskSync_BuildPush(const TodoTask *tasks, int count,
+                        const char deleted[][TODO_STORE_ID_LEN], int delCount,
+                        char *dst, size_t cap) {
+    TaskSync_BuildPushEx(tasks, count, deleted, delCount, NULL, dst, cap);
 }
 
 int TaskSync_ParsePushResp(const char *json, TaskSyncItem *conflicts, int cap) {
@@ -154,10 +188,11 @@ int TaskSync_ParsePushResp(const char *json, TaskSyncItem *conflicts, int cap) {
     return n;
 }
 
-int TaskSync_ParseCreated(const char *json, TaskSyncItem *out, int cap) {
+static int ParseIdMap(const char *json, const char *key, TaskSyncItem *out,
+                      int cap) {
     if (!json || !out || cap <= 0) return 0;
     const char *cur = NULL;
-    if (!FindArrayObjects(json, "created", &cur)) return 0;
+    if (!FindArrayObjects(json, key, &cur)) return 0;
     int n = 0;
     char slice[512];
     while (n < cap && NextObject(&cur, slice, sizeof(slice))) {
@@ -166,7 +201,16 @@ int TaskSync_ParseCreated(const char *json, TaskSyncItem *out, int cap) {
                                 sizeof(out[n].clientId));
         TodoSyncJson_ExtractStr(slice, "server_id", out[n].serverId,
                                 sizeof(out[n].serverId));
+        TodoSyncJson_ExtractInt(slice, "updated_at", &out[n].updatedAt);
         if (out[n].clientId[0] && out[n].serverId[0]) n++;
     }
     return n;
+}
+
+/* Server-side authoritative stamps for every row this push touched
+ * (created / updated / already-equal). Adopting them keeps local
+ * updated_at in the server's clock domain, so clock skew cannot make the
+ * local side permanently win nor silently ignore later remote edits. */
+int TaskSync_ParseApplied(const char *json, TaskSyncItem *out, int cap) {
+    return ParseIdMap(json, "applied_rows", out, cap);
 }

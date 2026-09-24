@@ -5,8 +5,9 @@
  * Pull: GET /api/catime/sync?updated_after=<cursor> -> changed_since[]
  *   merged into local store by id (server newer wins; local loser is NOT
  *   dropped silently -- caller writes it to a conflict file first).
- * Push: POST /api/catime/push {tasks, deleted} with client stable ids.
- * Local txt mtime triggers push; poll timer triggers pull.
+ * Push: POST /api/catime/push {tasks, deleted} with client stable ids for
+ * the rows on the sync book; the poll timer drives both directions, and the
+ * caller gates the push on the payload changing (not on todo.txt mtime).
  */
 #ifndef CATIME_TODO_TASK_SYNC_H
 #define CATIME_TODO_TASK_SYNC_H
@@ -30,6 +31,7 @@ typedef struct {
     BOOL done;                          /* status == done */
     BOOL deleted;                       /* tombstone */
     long long updatedAt;
+    char calendarId[TODO_STORE_UUID_LEN]; /* tweek calendar_id (#28a/28b) */
 } TaskSyncItem;
 
 /* Parse pull response body. changed_since[] -> items. cursor -> server_time.
@@ -37,17 +39,29 @@ typedef struct {
 int TaskSync_ParsePull(const char *json, TaskSyncItem *out, int cap,
                        long long *serverTimeOut);
 
-/* Build push request body from local tasks + deleted ids. dst JSON cap.
- * Emits client_id + server_id + title + date + due_date + priority +
- * status + updated_at per task. */
+
+/* #28b: parse top-level "calendars":[{id,name,color}] for the book picker. */
+typedef struct {
+    char id[TODO_STORE_UUID_LEN];
+    char name[TODO_STORE_BOARD_LEN];
+} TaskSyncCal;
+int TaskSync_ParseCalendars(const char *json, TaskSyncCal *out, int cap);
+
+/* Build push request body from local tasks + deleted ids.
+ * calendarId (tweek calendar uuid, may be NULL) tags the batch so the
+ * server files rows into the selected book. */
+void TaskSync_BuildPushEx(const TodoTask *tasks, int count,
+                          const char deleted[][TODO_STORE_ID_LEN], int delCount,
+                          const char *calendarId, char *dst, size_t cap);
 void TaskSync_BuildPush(const TodoTask *tasks, int count,
                         const char deleted[][TODO_STORE_ID_LEN], int delCount,
                         char *dst, size_t cap);
-/* Parse push response created[] mappings (client_id -> server_id). */
-int TaskSync_ParseCreated(const char *json, TaskSyncItem *out, int cap);
-
-/* Parse push response: applied/deleted counts + conflicts[] items. */
+/* Parse push response: conflicts[] items (server-won losers, caller writes
+ * a conflict file) + applied_rows[] server stamps for every row touched
+ * (created/updated/equal), used to adopt the server clock domain. */
 int TaskSync_ParsePushResp(const char *json, TaskSyncItem *conflicts, int cap);
+int TaskSync_ParseApplied(const char *json, TaskSyncItem *out, int cap);
+
 
 #ifdef __cplusplus
 }

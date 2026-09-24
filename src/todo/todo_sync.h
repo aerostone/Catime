@@ -35,6 +35,8 @@ void TodoSync_Reload(void);
 /* Read current Sync settings for the settings dialog. */
 void TodoSync_GetSettings(BOOL *enabled, char *serverUrl, size_t urlCap,
                           char *token, size_t tokenCap, int *pollSec);
+void TodoSync_GetCalendarId(char *out, size_t cap); /* #28b: sync board source */
+void TodoSync_SetCalendarId(const char *calendarId); /* #28b: persist + repull */
 /* Write Sync settings via INI cache layer (no bare ProfileString). */
 BOOL TodoSync_ApplySettings(BOOL enabled, const char *serverUrl,
                             const char *token, int pollSec);

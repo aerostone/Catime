@@ -130,6 +130,10 @@ BOOL TodoSyncHttp_Post(const char *url, const char *bearer, const char *bodyJson
     return SendJson(url, L"POST", bearer, bodyJson);
 }
 
+BOOL TodoSyncHttp_Patch(const char *url, const char *bearer, const char *bodyJson) {
+    return SendJson(url, L"PATCH", bearer, bodyJson);
+}
+
 /* POST JSON and return the response body (caller frees). NULL on failure. */
 char *TodoSyncHttp_PostResp(const char *url, const char *bearer,
                             const char *bodyJson) {
@@ -171,8 +175,4 @@ char *TodoSyncHttp_PostResp(const char *url, const char *bearer,
     InternetCloseHandle(hConn);
     InternetCloseHandle(hNet);
     return buf;
-}
-
-BOOL TodoSyncHttp_Patch(const char *url, const char *bearer, const char *bodyJson) {
-    return SendJson(url, L"PATCH", bearer, bodyJson);
 }

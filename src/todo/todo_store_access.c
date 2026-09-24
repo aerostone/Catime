@@ -27,3 +27,18 @@ int TodoStore_SnapshotLocal(TodoTask *out, int outCap) {
     TodoStore_Unlock();
     return w;
 }
+
+/* Rows that live on tweek (pulled or added on the sync book). Only these
+ * are pushed back: local books stay local-only. */
+int TodoStore_SnapshotSync(TodoTask *out, int outCap) {
+    if (!out || outCap <= 0) return 0;
+    TodoStore_Lock();
+    int n = TodoStore_Count();
+    int w = 0;
+    for (int i = 0; i < n && w < outCap; i++) {
+        TodoTask *t = TodoStore_RowAt(i);
+        if (t && t->source == TODO_SOURCE_SYNC) out[w++] = *t;
+    }
+    TodoStore_Unlock();
+    return w;
+}

@@ -195,6 +195,7 @@
 #define IDC_TODO_BOOK_SETTINGS 827        /**< Open sync settings button */
 #define IDC_TODO_BOOK_STATUS 828          /**< Sync status line */
 #define IDC_TODO_SAVE_BUTTON 829          /**< Save edit-row into selected task (RD9) */
+#define IDC_TODO_BOOK_SYNC_CAL 830        /**< Sync-book (tweek cal) picker (#28b) */
 
 /** @brief Custom text display dialog identifiers */
 #define IDD_CUSTOM_TEXT_DISPLAY_DIALOG 770      /**< Custom text display dialog */

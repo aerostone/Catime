@@ -51,15 +51,8 @@ void TodoDlg_OnAdd(HWND hdlg) {
     else if (imp == 3) level = TODO_IMPORTANCE_HIGH;
     char board[TODO_STORE_BOARD_LEN * 2];
     TodoDlg_GetBoard(hdlg, board, sizeof(board));
-    if (strcmp(board, TODO_BOARD_SYNC) == 0) {
-        /* the sync board is pull-only: local tasks go to the default board */
-        strcpy_s(board, sizeof(board), TODO_BOARD_DEFAULT);
-        MessageBoxW(hdlg,
-            GetLocalizedString(
-                L"\u540c\u6b65\u4efb\u52a1\u672c\u53ea\u63a5\u6536\u670d\u52a1\u5668\u4efb\u52a1\uff0c\u5df2\u6539\u4e3a\u6dfb\u52a0\u5230\u672c\u5730\u4efb\u52a1\u672c",
-                L"The sync board only receives server tasks; added locally"),
-            L"TODO", MB_ICONINFORMATION);
-    }
+    /* adding on the sync book creates the task on tweek (next push) */
+    BOOL intoSync = (strcmp(board, TODO_BOARD_SYNC) == 0);
     if (!TodoStore_AddTo(title, level, due, board)) {
         MessageBoxW(hdlg,
             GetLocalizedString(L"\u6dfb\u52a0\u5931\u8d25\uff08\u65e5\u671f\u683c\u5f0f YYYY-MM-DD\uff1f\uff09",
@@ -71,19 +64,22 @@ void TodoDlg_OnAdd(HWND hdlg) {
     { /* RD7: the new row stays visible and selected */
         char nid[TODO_STORE_ID_LEN] = "";
         TodoStore_LastAddedId(nid, sizeof(nid));
-        if (nid[0]) TodoDlg_Preselect(nid);
+        if (nid[0]) {
+            if (intoSync) TodoStore_MarkSynced(nid);
+            TodoDlg_Preselect(nid);
+        }
     }
     TodoStickies_RefreshAll();
     TodoDlg_RefreshList(hdlg);
 }
 
+/* Every listed row lives in the local store, so all rows are editable:
+ * sync rows carry a serverId, and a local edit is pushed back to tweek on
+ * the next round (newer-wins by updated_at). */
 void TodoDlg_OnToggleDone(HWND hdlg) {
     TodoTask *t = SelectedTask();
     if (!t) return;
-    if (t->source == TODO_SOURCE_LOCAL ||
-        (t->id[0] == 'C' && t->id[1] == ':')) {
-        TodoStore_SetDone(t->id, !t->done);
-    }
+    TodoStore_SetDone(t->id, !t->done);
     TodoStickies_RefreshAll();
     TodoDlg_RefreshList(hdlg);
 }
@@ -91,26 +87,28 @@ void TodoDlg_OnToggleDone(HWND hdlg) {
 void TodoDlg_OnDelete(HWND hdlg) {
     TodoTask *t = SelectedTask();
     if (!t) return;
-    if (t->source == TODO_SOURCE_LOCAL ||
-        (t->id[0] == 'C' && t->id[1] == ':')) {
-        int rc = MessageBoxW(hdlg,
+    /* only server-backed rows warn about the v -> server tombstone */
+    int rc;
+    if (t->source == TODO_SOURCE_SYNC) {
+        rc = MessageBoxW(hdlg,
             GetLocalizedString(
                 L"\u5220\u9664\u540e\u5c06\u540c\u6b65\u5220\u9664\u670d\u52a1\u7aef\u4efb\u52a1\uff0c\u786e\u8ba4\u5220\u9664\uff1f",
                 L"Delete will also remove the server task on next sync. Delete?"),
             GetLocalizedString(L"TODO", L"TODO"),
             MB_OKCANCEL | MB_ICONWARNING);
-        if (rc != IDOK) return;
-        char id[TODO_STORE_ID_LEN];
-        strcpy_s(id, sizeof(id), t->id);
-            TodoStore_Remove(id);
-        TodoStickies_RefreshAll();
-        TodoDlg_RefreshList(hdlg);
     } else {
-        MessageBoxW(hdlg,
-            GetLocalizedString(L"\u8be5\u884c\u4e3a\u53ea\u8bfb\u89c6\u56fe\uff0c\u65e0\u53ef\u64cd\u4f5c\u4efb\u52a1",
-                               L"This row is a read-only view"),
-            GetLocalizedString(L"TODO", L"TODO"), MB_ICONINFORMATION);
+        rc = MessageBoxW(hdlg,
+            GetLocalizedString(L"\u786e\u8ba4\u5220\u9664\u8be5\u4efb\u52a1\uff1f",
+                               L"Delete this task?"),
+            GetLocalizedString(L"TODO", L"TODO"),
+            MB_OKCANCEL | MB_ICONWARNING);
     }
+    if (rc != IDOK) return;
+    char id[TODO_STORE_ID_LEN];
+    strcpy_s(id, sizeof(id), t->id);
+    TodoStore_Remove(id);
+    TodoStickies_RefreshAll();
+    TodoDlg_RefreshList(hdlg);
 }
 
 /* RD9: selecting a row fills the edit row (title/date/priority). */
@@ -158,15 +156,6 @@ void TodoDlg_OnSaveEdit(HWND hdlg) {
         MessageBoxW(hdlg,
             GetLocalizedString(L"\u5148\u9009\u62E9\u4E00\u4E2A\u4EFB\u52A1",
                                L"Select a task first"),
-            L"TODO", MB_ICONINFORMATION);
-        return;
-    }
-    BOOL editable = (t->source == TODO_SOURCE_LOCAL ||
-                     (t->id[0] == 'C' && t->id[1] == ':'));
-    if (!editable) {
-        MessageBoxW(hdlg,
-            GetLocalizedString(L"\u8BE5\u884C\u4E3A\u53EA\u8BFB\u89C6\u56FE",
-                               L"This row is read-only"),
             L"TODO", MB_ICONINFORMATION);
         return;
     }

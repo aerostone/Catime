@@ -199,3 +199,21 @@ void TodoStore_ClearDeleted(void) {
     _snprintf_s(p, sizeof(p), _TRUNCATE, "%s.deleted", txt);
     DeleteFileA(p);
 }
+
+/* Mark a freshly added row as living on the sync book: it shows on the
+ * sync board and is pushed up on the next round. */
+BOOL TodoStore_MarkSynced(const char *id) {
+    if (!id || !id[0]) return FALSE;
+    TodoStore_Lock();
+    int i = TodoStore_FindIndex(id);
+    BOOL ok = FALSE;
+    if (i >= 0) {
+        TodoTask *t = TodoStore_RowAt(i);
+        strcpy_s(t->board, sizeof(t->board), TODO_BOARD_SYNC);
+        t->source = TODO_SOURCE_SYNC;
+        TodoStore_Save();
+        ok = TRUE;
+    }
+    TodoStore_Unlock();
+    return ok;
+}

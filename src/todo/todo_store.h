@@ -78,6 +78,8 @@ void TodoStore_StripDeleted(const char *id);
 
 /* Snapshot local tasks (for merged query). Returns items written. */
 int TodoStore_SnapshotLocal(TodoTask *out, int outCap);
+int TodoStore_SnapshotSync(TodoTask *out, int outCap);
+BOOL TodoStore_MarkSynced(const char *id);
 /* Lock/row accessors for the sync-upsert TU (caller must lock). */
 void TodoStore_Lock(void);
 void TodoStore_Unlock(void);

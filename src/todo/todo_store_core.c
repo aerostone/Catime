@@ -9,7 +9,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 #include "todo_normalize.h"
 #include "todo_store_util.h"
@@ -137,10 +136,6 @@ BOOL TodoStore_Init(const wchar_t *configIniPath) {
 void TodoStore_Shutdown(void) {
 }
 
-static long long StampNow(void) {
-    return (long long)time(NULL);
-}
-
 BOOL TodoStore_Add(const char *title, TodoImportance imp, const char *dueDate) {
     return TodoStore_AddTo(title, imp, dueDate, TODO_BOARD_DEFAULT);
 }
@@ -167,7 +162,7 @@ BOOL TodoStore_AddTo(const char *title, TodoImportance imp, const char *dueDate,
         if (board && board[0] && strlen(board) < TODO_STORE_BOARD_LEN)
             strcpy_s(t.board, sizeof(t.board), board);
         TodoStore_TodayStr(t.createdAt, sizeof(t.createdAt));
-        t.updatedAt = StampNow();
+        t.updatedAt = TodoStore_StampNext(0);
         s_tasks[s_count++] = t;
         strcpy_s(s_lastAddedId, sizeof(s_lastAddedId), t.id); /* RD7 */
         if (s_txtPath[0]) SaveLocked();
@@ -186,7 +181,7 @@ BOOL TodoStore_SetDone(const char *id, BOOL done) {
         s_tasks[i].done = done;
         if (done) TodoStore_TodayStr(s_tasks[i].doneAt, sizeof(s_tasks[i].doneAt));
         else s_tasks[i].doneAt[0] = '\0';
-        s_tasks[i].updatedAt = StampNow();
+        s_tasks[i].updatedAt = TodoStore_StampNext(s_tasks[i].updatedAt);
         if (s_txtPath[0]) SaveLocked();
         ok = TRUE;
     }
@@ -223,7 +218,7 @@ BOOL TodoStore_SetTitle(const char *id, const char *title) {
     BOOL ok = FALSE;
     if (i >= 0) {
         strcpy_s(s_tasks[i].title, sizeof(s_tasks[i].title), clean);
-        s_tasks[i].updatedAt = StampNow();
+        s_tasks[i].updatedAt = TodoStore_StampNext(s_tasks[i].updatedAt);
         if (s_txtPath[0]) SaveLocked();
         ok = TRUE;
     }
@@ -239,7 +234,7 @@ BOOL TodoStore_SetImportance(const char *id, TodoImportance imp) {
     BOOL ok = FALSE;
     if (i >= 0) {
         s_tasks[i].importance = imp;
-        s_tasks[i].updatedAt = StampNow();
+        s_tasks[i].updatedAt = TodoStore_StampNext(s_tasks[i].updatedAt);
         if (s_txtPath[0]) SaveLocked();
         ok = TRUE;
     }
@@ -256,7 +251,7 @@ BOOL TodoStore_SetDueDate(const char *id, const char *dueDate) {
     if (i >= 0) {
         if (dueDate) strcpy_s(s_tasks[i].dueDate, sizeof(s_tasks[i].dueDate), dueDate);
         else s_tasks[i].dueDate[0] = '\0';
-        s_tasks[i].updatedAt = StampNow();
+        s_tasks[i].updatedAt = TodoStore_StampNext(s_tasks[i].updatedAt);
         if (s_txtPath[0]) SaveLocked();
         ok = TRUE;
     }

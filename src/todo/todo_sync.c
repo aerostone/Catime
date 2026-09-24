@@ -22,6 +22,7 @@ HWND TodoSync_MainHwnd(void) { return g_todoSyncHwnd; }
 wchar_t g_todoSyncIniPath[MAX_PATH] = L"";
 char g_todoSyncServer[TODO_URL_LEN] = "";
 char g_todoSyncToken[TODO_TOKEN_LEN] = "";
+char g_todoSyncCalendarId[64] = ""; /* #28b: which tweek calendar to pull */
 BOOL g_todoSyncEnabled = FALSE;
 int g_todoSyncPollSec = TODO_POLL_DEFAULT_S;
 HANDLE g_todoSyncThread = NULL;
@@ -35,6 +36,12 @@ static void LoadConfigW(void) {
     GetPrivateProfileStringW(L"Sync", L"ServerUrl", L"", server, _countof(server), g_todoSyncIniPath);
     GetPrivateProfileStringW(L"Sync", L"Token", L"", token, _countof(token), g_todoSyncIniPath);
     g_todoSyncEnabled = GetPrivateProfileIntW(L"Sync", L"Enabled", 0, g_todoSyncIniPath) != 0;
+    {
+        wchar_t wcal[64];
+        GetPrivateProfileStringW(L"Sync", L"CalendarId", L"", wcal, _countof(wcal), g_todoSyncIniPath);
+        if (!WideCharToMultiByte(CP_UTF8, 0, wcal, -1, g_todoSyncCalendarId, sizeof(g_todoSyncCalendarId), NULL, NULL))
+            g_todoSyncCalendarId[0] = '\0';
+    }
     g_todoSyncPollSec = (int)GetPrivateProfileIntW(L"Sync", L"PollInterval", TODO_POLL_DEFAULT_S, g_todoSyncIniPath);
     if (g_todoSyncPollSec < 15) g_todoSyncPollSec = 15;
     if (g_todoSyncPollSec > 600) g_todoSyncPollSec = 600;
@@ -119,7 +126,10 @@ BOOL TodoSync_Init(HWND hwndMain, const wchar_t *iniPath) {
     LoadConfigW();
     memset(&g_todoSyncCache, 0, sizeof(g_todoSyncCache));
     InterlockedExchange(&g_todoSyncRunning, 1);
-    g_todoSyncThread = (HANDLE)_beginthreadex(NULL, 0, PollThread, NULL, 0, NULL);
+    /* 4 MiB: the merge pass holds 200-entry pull + push arrays together on
+     * the first full sync, well past the 1 MiB default stack. */
+    g_todoSyncThread = (HANDLE)_beginthreadex(NULL, 4u * 1024u * 1024u,
+                                              PollThread, NULL, 0, NULL);
     if (!g_todoSyncThread) {
         InterlockedExchange(&g_todoSyncRunning, 0);
         return FALSE;
@@ -171,6 +181,24 @@ void TodoSync_GetSettings(BOOL *enabled, char *serverUrl, size_t urlCap,
     LeaveCriticalSection(&g_todoSyncLock);
 }
 
+void TodoSync_GetCalendarId(char *out, size_t cap) {
+    EnterCriticalSection(&g_todoSyncLock);
+    if (out && cap) strcpy_s(out, cap, g_todoSyncCalendarId);
+    LeaveCriticalSection(&g_todoSyncLock);
+}
+
+void TodoSync_SetCalendarId(const char *calendarId) {
+    EnterCriticalSection(&g_todoSyncLock);
+    if (calendarId) strcpy_s(g_todoSyncCalendarId, sizeof(g_todoSyncCalendarId), calendarId);
+    LeaveCriticalSection(&g_todoSyncLock);
+    char iniA[MAX_PATH] = "";
+    if (WideCharToMultiByte(CP_UTF8, 0, g_todoSyncIniPath, -1,
+                            iniA, sizeof(iniA), NULL, NULL) && iniA[0]) {
+        WriteIniString("Sync", "CalendarId", calendarId ? calendarId : "", iniA);
+    }
+    TodoSync_PollNow(); /* repull under the new book */
+}
+
 BOOL TodoSync_ApplySettings(BOOL enabled, const char *serverUrl,
                             const char *token, int pollSec) {
     if (pollSec < 15) pollSec = 15;
@@ -187,7 +215,7 @@ BOOL TodoSync_ApplySettings(BOOL enabled, const char *serverUrl,
         return FALSE;
     char pollA[16];
     _snprintf_s(pollA, sizeof(pollA), _TRUNCATE, "%d", pollSec);
-    IniKeyValue updates[4];
+    IniKeyValue updates[5];
     updates[0].section = "Sync";
     updates[0].key = "Enabled";
     updates[0].value = enabled ? "1" : "0";
@@ -200,55 +228,10 @@ BOOL TodoSync_ApplySettings(BOOL enabled, const char *serverUrl,
     updates[3].section = "Sync";
     updates[3].key = "PollInterval";
     updates[3].value = pollA;
-    return WriteIniMultipleAtomic(iniA, updates, 4);
-}
-
-BOOL TodoSync_OnPomodoroComplete(const char *taskId, int minutes) {
-    char server[TODO_URL_LEN], token[TODO_TOKEN_LEN];
-    char tid[TODO_ID_LEN] = "";
-    /* local stable id -> server uuid via store serverId; C:uuid strips prefix */
-    if (taskId && *taskId) {
-        if (taskId[0] == 'C' && taskId[1] == ':') {
-            strcpy_s(tid, sizeof(tid), taskId + 2);
-        } else {
-            TodoTask lt;
-            memset(&lt, 0, sizeof(lt));
-            if (TodoStore_FindById(taskId, &lt) && lt.serverId[0])
-                strcpy_s(tid, sizeof(tid), lt.serverId);
-            else
-                strcpy_s(tid, sizeof(tid), taskId);
-        }
-    }
-    EnterCriticalSection(&g_todoSyncLock);
-    strcpy_s(server, sizeof(server), g_todoSyncServer);
-    strcpy_s(token, sizeof(token), g_todoSyncToken);
-    BOOL en = g_todoSyncEnabled;
-    if (!tid[0] && g_todoSyncCache.todayCount > 0)
-        strcpy_s(tid, sizeof(tid), g_todoSyncCache.today[0].id);
-    LeaveCriticalSection(&g_todoSyncLock);
-    if (!en || !server[0] || !token[0]) return FALSE;
-    char url[TODO_URL_LEN + 32], body[256];
-    _snprintf_s(url, sizeof(url), _TRUNCATE, "%s/api/pomodoro", server);
-    _snprintf_s(body, sizeof(body), _TRUNCATE,
-                "{\"task_id\":\"%s\",\"minutes\":%d,\"origin\":\"catime\"}", tid, minutes);
-    BOOL ok = TodoSyncHttp_Post(url, token, body);
-    if (ok) TodoSync_PollNow();
-    return ok;
-}
-
-BOOL TodoSync_MarkDone(const char *taskId) {
-    char server[TODO_URL_LEN], token[TODO_TOKEN_LEN];
-    EnterCriticalSection(&g_todoSyncLock);
-    strcpy_s(server, sizeof(server), g_todoSyncServer);
-    strcpy_s(token, sizeof(token), g_todoSyncToken);
-    BOOL en = g_todoSyncEnabled;
-    LeaveCriticalSection(&g_todoSyncLock);
-    if (!en || !server[0] || !token[0] || !taskId || !*taskId) return FALSE;
-    char url[TODO_URL_LEN + 128];
-    _snprintf_s(url, sizeof(url), _TRUNCATE, "%s/api/tasks/%s", server, taskId);
-    BOOL ok = TodoSyncHttp_Patch(url, token, "{\"status\":\"done\"}");
-    if (ok) TodoSync_PollNow();
-    return ok;
+    updates[4].section = "Sync";
+    updates[4].key = "CalendarId";
+    updates[4].value = g_todoSyncCalendarId;
+    return WriteIniMultipleAtomic(iniA, updates, 5);
 }
 
 int TodoSync_GetLines(char lines[][256], int maxLines) {
