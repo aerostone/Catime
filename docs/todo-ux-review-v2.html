@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Catime TODO UX 评审 v2 — Board-card 重构后（2026-09-21）</title>
+<style>
+  :root {
+    --paper: #FAFAF7; --card: #FFFFFF; --ink: #1A1A1A;
+    --muted: #6B7280; --line: #E5E2D9;
+    --p0: #DC2626; --p1: #D97706; --p2: #4F6DF5; --ok: #047857;
+    --mono: "Cascadia Mono", Consolas, "Noto Sans Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink);
+    font-family: "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    font-size: 15px; line-height: 1.7; }
+  header.top { border-bottom: 2px solid var(--ink); padding: 40px 32px 28px; max-width: 1080px; margin: 0 auto; }
+  header.top .kicker { font-family: var(--mono); font-size: 12px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+  header.top h1 { font-size: 28px; margin: 8px 0; }
+  header.top p { color: var(--muted); max-width: 780px; margin: 4px 0; }
+  .verdict { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; max-width: 1080px; margin: 24px auto 0; padding: 0 32px; }
+  .verdict .cell { background: var(--card); border: 1px solid var(--line); padding: 14px 16px; }
+  .verdict .cell b { display: block; font-size: 26px; }
+  .verdict .cell span { font-size: 13px; color: var(--muted); }
+  main { max-width: 1080px; margin: 0 auto; padding: 24px 32px 80px; }
+  .filters { position: sticky; top: 0; background: var(--paper); padding: 12px 0; z-index: 5; border-bottom: 1px solid var(--line); }
+  .filters button { font-family: inherit; font-size: 13px; padding: 6px 14px; margin-right: 8px; border: 1px solid var(--line); background: var(--card); cursor: pointer; }
+  .filters button[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .filters button:focus-visible { outline: 2px solid var(--p2); outline-offset: 2px; }
+  section.surface { margin-top: 36px; }
+  section.surface > h2 { font-size: 20px; border-left: 6px solid var(--ink); padding-left: 12px; margin-bottom: 4px; }
+  section.surface > .sub { color: var(--muted); font-size: 13px; margin: 0 0 12px 18px; font-family: var(--mono); }
+  article.finding { background: var(--card); border: 1px solid var(--line); padding: 16px 20px; margin: 12px 0; }
+  article.finding.hidden { display: none; }
+  article.finding.fixed { opacity: 0.85; }
+  .fid { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+  .fid .no { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+  .fid h3 { margin: 0; font-size: 16px; }
+  .sev { font-size: 12px; font-weight: 700; padding: 2px 8px; color: #fff; white-space: nowrap; }
+  .sev.p0 { background: var(--p0); } .sev.p1 { background: var(--p1); } .sev.p2 { background: var(--p2); }
+  .sev.ok { background: var(--ok); }
+  .effort { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-left: auto; white-space: nowrap; }
+  .why { border-left: 3px solid var(--line); padding-left: 12px; color: #374151; margin: 8px 0; }
+  .fix { margin: 8px 0 0; } .fix::before { content: "建议 — "; font-weight: 700; }
+  .src { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  table.plan { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--card); }
+  table.plan th, table.plan td { border: 1px solid var(--line); padding: 8px 12px; text-align: left; vertical-align: top; }
+  table.plan th { background: #F3F1EA; font-size: 13px; }
+  table.plan td:first-child { font-family: var(--mono); white-space: nowrap; }
+  footer.actions { max-width: 1080px; margin: 0 auto; padding: 0 32px 80px; }
+  .ia { background: var(--card); border: 2px solid var(--ink); padding: 16px 20px; margin: 12px 0; }
+  .ia code { font-family: var(--mono); font-size: 13px; background: #F3F1EA; padding: 1px 6px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="kicker">Catime fork · UI/UX review v2 · 2026-09-21 · 对照 v1.6.6（63d6bcdc 之后）</div>
+  <h1>TODO / 便签 / 同步：v2 评审</h1>
+  <p>范围：v1（2026-09-19，18 项）评审之后的代码现状。v1 已修约 14 项；本轮只评<strong>现在还乱的地方</strong>，重点是 v1.6.6 board-card 重构引入的新问题。方法：重读四个表面的实现（菜单构造、RC、WndProc、绘制），尺子不变：5 秒测试 / 误触成本 / 状态可见性。</p>
+  <p>一句话结论：<strong>单编辑器原则被违反了——三个表面都能改任务，其中两个是假入口；便签卡单击即改、无悬停反馈、无键盘、无滚动，误触成本最高却反馈最少。</strong></p>
+</header>
+
+<div class="verdict">
+  <div class="cell"><b style="color:var(--p0)">2</b><span>P0 · 误触即改 / 静默裁剪</span></div>
+  <div class="cell"><b style="color:var(--p1)">5</b><span>P1 · 假入口 / 不对称 / 不可见</span></div>
+  <div class="cell"><b style="color:var(--p2)">4</b><span>P2 · 一致性打磨</span></div>
+  <div class="cell"><b style="color:var(--ok)">14/18</b><span>v1 项已修（见附表）</span></div>
+</div>
+
+<main>
+  <div class="filters" role="group" aria-label="按级别过滤">
+    <button data-f="all" aria-pressed="true">全部 11</button>
+    <button data-f="p0" aria-pressed="false">P0 · 2</button>
+    <button data-f="p1" aria-pressed="false">P1 · 5</button>
+    <button data-f="p2" aria-pressed="false">P2 · 4</button>
+  </div>
+
+  <section class="surface" id="ia">
+    <h2>0 · 先立原则：单编辑器</h2>
+    <p class="sub">不先定这个，后面每一项都是头痛医头</p>
+    <div class="ia">
+      <p style="margin-top:0">当前三个表面都能碰任务：<code>任务列表对话框</code>（真编辑器）、<code>便签卡行</code>（单击改完成、右键菜单改日期/优先级/移动/删除）、<code>托盘 Top5</code>（已改为纯导航，好）。而便签行菜单里的"设置截止日期 / 调整优先级"点进去<strong>并不是内联编辑，而是跳去列表对话框</strong>（<span class="src">EditInList</span>）——用户感知到的是"两个编辑器"，实际是一个编辑器加一个传送门。这就是"乱"的根。</p>
+      <p style="margin-bottom:0"><strong>原则：列表是唯一的增删改入口；便签卡只做展示 + 完成 + 番茄；托盘只做导航。</strong>下面 N2、N3 都是这条原则的实例化；接受这条，后面砍功能时才有依据。</p>
+    </div>
+  </section>
+
+  <section class="surface" id="sticky">
+    <h2>N · 便签卡（重灾区，6 项）</h2>
+    <p class="sub">src/todo/todo_stickies_window.c + todo_sticky_rowmenu.c + todo_board_render.c + todo_board_layout.h</p>
+
+    <article class="finding" data-sev="p0">
+      <div class="fid"><span class="no">N1</span><span class="sev p0">P0</span><h3>卡片行单击 = 直接切换完成，无悬停、无确认、无撤销</h3><span class="effort">改约 10 行</span></div>
+      <p class="why"><span class="src">WM_LBUTTONDOWN → BoardLayout_RowAt → TodoStore_SetDone(toggle)</span>：v1 的 A1（托盘单击完成）修好了，但同一个病搬到了便签卡上，而且更重——便签是常驻桌面、鼠标天天经过的表面。GDI 自绘行没有任何 hover 高亮（无 <span class="src">WM_MOUSEMOVE</span> 跟踪），用户在"点一下看看"时任务就被标完成，下次 push 同步到服务端。完成虽可再点回来，但同步出去的状态收不回。</p>
+      <p class="fix">单击行改为选中高亮（内存态即可），双击或右键菜单才切换完成；至少给行加 hover 底色，让"可点"先被看见再被触发。</p>
+    </article>
+
+    <article class="finding" data-sev="p0">
+      <div class="fid"><span class="no">N2</span><span class="sev p0">P0</span><h3>超高任务被静默裁掉，无"更多"提示</h3><span class="effort">改约 12 行</span></div>
+      <p class="why"><span class="src">PaintRows: if (top + ROW_H &gt; rc-&gt;bottom) break</span>：卡片没有滚动条，装不下的行直接不画，也没有 <span class="src">+n more</span> 尾行。用户看到"本周 3 件事"，实际有 8 件——比"列表闪空"更坏：闪空至少看得见，裁剪是看不见的丢信息。结合 N1，用户可能对着一个不完整的列表点完成。</p>
+      <p class="fix">画不下时最后一行画 <span class="src">…还有 n 项，双击打开列表</span>（纯文本即可），点击跳列表。卡片永远不能假装"这就是全部"。长远：卡片加滚轮支持（<span class="src">WM_MOUSEWHEEL + 首行偏移</span>）。</p>
+    </article>
+
+    <article class="finding" data-sev="p1">
+      <div class="fid"><span class="no">N3</span><span class="sev p1">P1</span><h3>行右键菜单是"假编辑器"：日期/优先级点完跳列表</h3><span class="effort">删约 20 行（比特性加法便宜）</span></div>
+      <p class="why">行菜单 6 项里"设置截止日期 / 调整优先级"实际调用 <span class="src">EditInList</span>（preselect 后打开列表对话框）。用户在卡片上起意、却在另一个窗口落地，上下文（board、滚动位置）全丢。既然都要去列表，不如一开始就去——菜单项在假装自己能做它做不了的事。</p>
+      <p class="fix">执行 §0 原则：行菜单只留 <span class="src">标记完成 / 开始番茄 / 移到便签 / 删除（含确认，已有）</span>；日期与优先级两项删除，改为一项 <span class="src">在列表中编辑…</span>（诚实的中转）。</p>
+    </article>
+
+    <article class="finding" data-sev="p1">
+      <div class="fid"><span class="no">N4</span><span class="sev p1">P1</span><h3>隐藏是一次点击，找回是三次点击</h3><span class="effort">改约 8 行</span></div>
+      <p class="why">标题栏最右 18px（<span class="src">BOARD_HIT_CLOSE</span>）点一下整板隐藏；找回要走托盘 → TODO → 便签子菜单 → 勾选该板。18px 热区贴着"打开列表"（20px）和"折叠"（20px），三连击区总宽 58px，触摸板用户极易误触隐藏，然后认定"便签丢了"。tooltip 虽已诚实（取消置顶/保留任务），但不对称成本没变。</p>
+      <p class="fix">三选一（推荐①）：① 隐藏移出标题栏，只留右键菜单；② 隐藏后在原地留 150×32 的"已隐藏"桩（点即回）；③ 至少把隐藏热区从最右（最易误触位）与折叠对调。</p>
+    </article>
+
+    <article class="finding" data-sev="p1">
+      <div class="fid"><span class="no">N5</span><span class="sev p1">P1</span><h3>卡片零键盘支持、无障碍断裂</h3><span class="effort">M · 约 40 行</span></div>
+      <p class="why"><span class="src">StickyProc</span> 无 <span class="src">WM_KEYDOWN / WM_GETDLGCODE</span>，行是画出来的不是控件：键盘用户 Tab 不到行、回车切不了完成、方向键动不了。列表对话框是标准控件（键盘可用），卡片是纯鼠标面——同一功能两套可达性。上游番茄主窗口是键盘可用的，fork 功能不应开倒车。</p>
+      <p class="fix">最小可用：卡片获焦时上下键移动"选中行"（复用 N1 的选中态）、空格切换完成、Esc 隐藏。选中态画虚线框或底色（与 hover 共用一套）。</p>
+    </article>
+
+    <article class="finding" data-sev="p2">
+      <div class="fid"><span class="no">N6</span><span class="sev p2">P2</span><h3>"×"字形仍在说谎，tooltip 在替它圆场</h3><span class="effort">改约 6 行</span></div>
+      <p class="why">v1-D2 修了一半：tooltip 已诚实（"取消置顶（保留任务）"），但字形还是全平台"关闭"含义的 ×。用户先看到的是字形、不是 tooltip——第一眼仍被误导。</p>
+      <p class="fix">× 改为图钉/眼睛字形（已置顶 <span class="src">◉</span> / 点击后隐藏），或与折叠 glyph 统一为线条风（<span class="src">– / ▢ / ≡ / ◉</span> 一套）。绘制侧 6 行。</p>
+    </article>
+  </section>
+
+  <section class="surface" id="list">
+    <h2>L · 任务列表对话框（2 项）</h2>
+    <p class="sub">resource/todo_dialog.rc + src/dialog/dialog_todo_list*.c + dialog_todo_boards.c</p>
+
+    <article class="finding" data-sev="p1">
+      <div class="fid"><span class="no">L1</span><span class="sev p1">P1</span><h3>看板管理与任务管理挤在一个对话框</h3><span class="effort">M · RC + 逻辑约 50 行</span></div>
+      <p class="why">底部 board 行：combo + New/Rename/Del/Sticky + Close——5 个按钮管"板"，上面 8 个控件管"任务"。用户想加任务，先要越过一排不认识的板按钮（New 是新建任务还是新建板？——是板）。5 秒测试：第一眼不知道这个对话框到底管几件事。v1-B2 修了过滤器分组，但底部又长出第二套管理体系。</p>
+      <p class="fix">板管理收进 combo 旁的一个 <span class="src">…</span> 按钮（弹小菜单：新建/重命名/删除/显示隐藏），默认只留 <span class="src">Board: [combo▾] […] Sticky [x] [Close]</span> 一行。任务区保持唯一视觉主体。</p>
+    </article>
+
+    <article class="finding" data-sev="p2">
+      <div class="fid"><span class="no">L2</span><span class="sev p2">P2</span><h3>同步板上 Add 先弹窗再改存他处，全程打断</h3><span class="effort">改约 10 行</span></div>
+      <p class="why">选中同步板时点 Add：<span class="src">MessageBox</span> 告知 pull-only 并改存默认板。信息是对的，但模态弹窗打断了最高频操作（加任务）。用户第三次看到这个框就会烦。</p>
+      <p class="fix">同步板选中时直接禁用 Add 行（edit + due + importance 置灰），行内 cue 写 <span class="src">同步板只读，请切本地便签添加</span>。把"事后解释"变成"事前可见"（同 v1-C1 的修法）。</p>
+    </article>
+  </section>
+
+  <section class="surface" id="tray">
+    <h2>T · 托盘菜单（2 项）</h2>
+    <p class="sub">src/tray/tray_menu_todo.c — A1 已修为导航，值得肯定；剩下的是体量问题</p>
+
+    <article class="finding" data-sev="p1">
+      <div class="fid"><span class="no">T1</span><span class="sev p1">P1</span><h3>菜单长达 13 项，主动作淹没</h3><span class="effort">改约 15 行</span></div>
+      <p class="why">header + 5 任务 + New + 便签子菜单 + 列表 + 状态 + [冲突] + Sync + 设置 = 最多 13 行。托盘菜单是扫读不是阅读的表面；"同步状态"这类低频信息与"任务"抢位置。5 秒测试：用户找"打开列表"要扫过 5 个任务行。</p>
+      <p class="fix">任务行压到 3 行（Top3），第 4 行改为 <span class="src">更多 (n)… → 打开列表</span>；同步状态行与 Sync Now 合并为一（<span class="src">Sync Now · 12:03 正常</span>，失败才红字拆行）。菜单回到 8 行以内。</p>
+    </article>
+
+    <article class="finding" data-sev="p2">
+      <div class="fid"><span class="no">L3</span><span class="sev p2">P2</span><h3>overdue 与高优先级共用 [A]，两种含义一个符号</h3><span class="effort">改约 8 行</span></div>
+      <p class="why"><span class="src">TodoRowMark</span> 把 overdue 强制标 [A]——用户无法区分"重要"和"过期"，而过期恰恰是最需要单独 कार्रवाई 的维度（v1-B4 的尾巴）。符号体系三处（托盘/列表/卡片）刚统一，又在这里混入第二含义。</p>
+      <p class="fix">overdue 独立符号 <span class="src">[!]</span>（纯文本，字体安全），[A]/[B]/[C] 只表达用户设定的重要度。绘制/行文案侧小改，体系三处同步。</p>
+    </article>
+  </section>
+
+  <section class="surface" id="sync">
+    <h2>S · 同步呈现（1 项，其余已修）</h2>
+    <p class="sub">状态行/冲突 badge/空态提示均已落地；剩一个文案级问题</p>
+    <article class="finding" data-sev="p2">
+      <div class="fid"><span class="no">S1</span><span class="sev p2">P2</span><h3>番茄倒计时 "P MM:SS" 与列表的"番茄"文案脱节</h3><span class="effort">改 1 行</span></div>
+      <p class="why">卡片标题栏拼的是 <span class="src">L"%s  %d   P %02d:%02d"</span>；v1.6.6 changelog 与行菜单写的是"番茄"。中英文两套文案里各出现一种写法。</p>
+      <p class="fix">统一为 <span class="src">番茄 MM:SS / Pomodoro MM:SS</span>（走语言表），与行菜单一致。1 行，别欠着。</p>
+    </article>
+  </section>
+
+  <section class="surface" id="done">
+    <h2>附 · v1 18 项落地核对（供对照，不占本次计数）</h2>
+    <p class="sub">✅=已修 🔶=修一半 ❌=未修（本次无未修）</p>
+    <table class="plan">
+      <tr><th>项</th><th>状态</th><th>现状</th></tr>
+      <tr><td>A1 托盘单击完成</td><td>✅</td><td>改为导航（preselect + 按板打开列表），菜单零破坏动作</td></tr>
+      <tr><td>A2 New/List 同目的地</td><td>✅</td><td>New 聚焦标题输入框，有真实差异</td></tr>
+      <tr><td>A3 符号体系</td><td>✅</td><td>[A]/[B]/[C]/[x] 三处统一（L3 指出 overdue 借用问题）</td></tr>
+      <tr><td>B1 Done 标签压框</td><td>✅</td><td>GROUPBOX 重排，无重叠</td></tr>
+      <tr><td>B2 过滤器分组</td><td>✅</td><td>时间范围 / 状态搜索两组；底部板行见 L1（新问题）</td></tr>
+      <tr><td>B3 日期逐字重查</td><td>✅</td><td>失焦+回车提交，关键词 200ms debounce，选中按 id 保留</td></tr>
+      <tr><td>B4 行信息扁平</td><td>✅</td><td>ImpTag + 右列 due/✓；overdue 表达见 L3</td></tr>
+      <tr><td>B5 OK/Close 同功能</td><td>✅</td><td>列表无 OK；cue banner 已加（关键词/标题/YYYY-MM-DD）</td></tr>
+      <tr><td>B6/D7 本地化</td><td>✅</td><td>全走 GetLocalizedString（含卡片/行菜单/tooltip 待补见下）</td></tr>
+      <tr><td>B7 空结果</td><td>✅</td><td>占位行区分未配置同步/无匹配；冲突 hint 行可点开目录</td></tr>
+      <tr><td>C1 空 backend 吞勾选</td><td>✅</td><td>Enable 门控 + 拒绝弹窗，不再静默</td></tr>
+      <tr><td>C2/S2 同步状态</td><td>✅</td><td>设置状态行 + 托盘状态标签 + 时间戳</td></tr>
+      <tr><td>C3 分组</td><td>✅</td><td>同步/便签两 GROUPBOX</td></tr>
+      <tr><td>D1 标题栏重叠</td><td>✅</td><td>board-card 重构后标题栏只剩板名+计数+3 glyph，分区明确</td></tr>
+      <tr><td>D2 "×"说谎</td><td>🔶</td><td>tooltip 诚实了，字形还是 × → 见 N6</td></tr>
+      <tr><td>D3 删除确认</td><td>✅</td><td>列表 + 卡片行菜单均有确认框并写清服务端后果</td></tr>
+      <tr><td>D4 折叠发现性</td><td>✅</td><td>三区 tooltip（含 dot 模式）</td></tr>
+      <tr><td>D5 菜单头锚点</td><td>✅</td><td>行菜单动作为主；卡片菜单 6 项有分隔（N3 建议再精简）</td></tr>
+      <tr><td>D6 颜色单通道</td><td>✅</td><td>ImpTag 文字符号 + 颜色保留</td></tr>
+      <tr><td>S1 冲突出口</td><td>✅</td><td>托盘 (!) + 冲突行 + 列表 hint 行 + 设置 Conflicts 按钮</td></tr>
+    </table>
+    <p style="color:var(--muted);font-size:13px">另：tooltip 文案（三区）仍是 L"..." 硬编码中文，未走语言表——与 B6/D7 同类，顺手补（约 5 行）。</p>
+  </section>
+</main>
+
+<footer class="actions">
+  <h2 style="font-size:20px;border-left:6px solid var(--ink);padding-left:12px">建议动手顺序（配合 §0 原则）</h2>
+  <table class="plan">
+    <tr><th>批次</th><th>项</th><th>理由</th></tr>
+    <tr><td>原则先行</td><td>确认 §0 单编辑器</td><td>不接受这条，N3/L1 无从下手；接受了就是删代码 mostly</td></tr>
+    <tr><td>P0 热修</td><td>N1（单击改完成）、N2（静默裁剪）</td><td>每天撞见 + 数据语义错误；都在绘制/WndProc 层，风险小</td></tr>
+    <tr><td>P1 防呆</td><td>N3（假编辑器）、N4（隐藏不对称）、T1（菜单瘦身）</td><td>删代码 + 移位置，不碰同步协议</td></tr>
+    <tr><td>P1 可达</td><td>N5（键盘）、L1（板管理收纳）</td><td>需要一点设计，一次做对</td></tr>
+    <tr><td>P2 收尾</td><td>N6（×字形）、L2（同步板禁用 Add）、L3（[!] overdue）、S1（番茄文案）+ tooltip 本地化</td><td>小改，可打包一批</td></tr>
+  </table>
+</footer>
+
+<script>
+  document.querySelectorAll('.filters button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.filters button').forEach(function (b) { b.setAttribute('aria-pressed', 'false'); });
+      btn.setAttribute('aria-pressed', 'true');
+      var f = btn.getAttribute('data-f');
+      document.querySelectorAll('article.finding').forEach(function (a) {
+        a.classList.toggle('hidden', f !== 'all' && a.getAttribute('data-sev') !== f);
+      });
+    });
+  });
+</script>
+</body>
+</html>

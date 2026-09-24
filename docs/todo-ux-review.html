@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Catime Fork 功能 UI/UX 评审 — TODO / 便签 / 同步</title>
+<style>
+  :root {
+    --paper: #FAFAF7;
+    --card: #FFFFFF;
+    --ink: #1A1A1A;
+    --muted: #6B7280;
+    --line: #E5E2D9;
+    --p0: #DC2626;
+    --p1: #D97706;
+    --p2: #4F6DF5;
+    --mono: "Cascadia Mono", Consolas, "Noto Sans Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    font-size: 15px; line-height: 1.7;
+  }
+  header.top {
+    border-bottom: 2px solid var(--ink);
+    padding: 40px 32px 28px; max-width: 1080px; margin: 0 auto;
+  }
+  header.top .kicker {
+    font-family: var(--mono); font-size: 12px; letter-spacing: 2px;
+    color: var(--muted); text-transform: uppercase;
+  }
+  header.top h1 { font-size: 30px; margin: 8px 0 8px; letter-spacing: 0.5px; }
+  header.top p { color: var(--muted); max-width: 760px; margin: 4px 0; }
+  .verdict {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    max-width: 1080px; margin: 24px auto 0; padding: 0 32px;
+  }
+  .verdict .cell {
+    background: var(--card); border: 1px solid var(--line);
+    padding: 14px 16px;
+  }
+  .verdict .cell b { display: block; font-size: 26px; }
+  .verdict .cell span { font-size: 13px; color: var(--muted); }
+  main { max-width: 1080px; margin: 0 auto; padding: 24px 32px 80px; }
+  .filters { position: sticky; top: 0; background: var(--paper); padding: 12px 0; z-index: 5; border-bottom: 1px solid var(--line); }
+  .filters button {
+    font-family: inherit; font-size: 13px; padding: 6px 14px; margin-right: 8px;
+    border: 1px solid var(--line); background: var(--card); cursor: pointer;
+  }
+  .filters button[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .filters button:focus-visible { outline: 2px solid var(--p2); outline-offset: 2px; }
+  section.surface { margin-top: 36px; }
+  section.surface > h2 {
+    font-size: 20px; border-left: 6px solid var(--ink); padding-left: 12px; margin-bottom: 4px;
+  }
+  section.surface > .sub { color: var(--muted); font-size: 13px; margin: 0 0 12px 18px; font-family: var(--mono); }
+  article.finding {
+    background: var(--card); border: 1px solid var(--line);
+    padding: 16px 20px; margin: 12px 0;
+  }
+  article.finding.hidden { display: none; }
+  .fid { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+  .fid .no { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+  .fid h3 { margin: 0; font-size: 16px; }
+  .sev { font-size: 12px; font-weight: 700; padding: 2px 8px; color: #fff; }
+  .sev.p0 { background: var(--p0); } .sev.p1 { background: var(--p1); } .sev.p2 { background: var(--p2); }
+  .effort { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-left: auto; white-space: nowrap; }
+  .why { border-left: 3px solid var(--line); padding-left: 12px; color: #374151; margin: 8px 0; }
+  .fix { margin: 8px 0 0; }
+  .fix::before { content: "建议 — "; font-weight: 700; }
+  /* ---- mockups ---- */
+  .mock { border: 1px solid var(--line); background: var(--card); margin: 16px 0; }
+  .mock .bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 16px; border-bottom: 1px solid var(--line);
+    font-family: var(--mono); font-size: 13px; color: var(--muted);
+  }
+  .mock .bar .tabs { margin-left: auto; display: flex; gap: 6px; }
+  .mock .bar .tabs button {
+    font-family: inherit; font-size: 12px; padding: 4px 12px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--paper);
+  }
+  .mock .bar .tabs button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+  .mock .stage { padding: 24px; overflow-x: auto; }
+  .win32 {
+    font-family: "Microsoft YaHei UI", "Segoe UI", sans-serif; font-size: 12px;
+    background: #F0F0F0; border: 1px solid #7A7A7A; color: #111;
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.12);
+  }
+  .win32 .title { background: #fff; border-bottom: 1px solid #D4D4D4; padding: 5px 8px; font-weight: 600; }
+  .win32 .body { padding: 10px; position: relative; }
+  .grp { border: 1px solid #B9B9B9; padding: 10px 8px 8px; margin-bottom: 8px; position: relative; background: #F5F5F2; }
+  .grp > legend, .grp > .legend {
+    position: absolute; top: -8px; left: 8px; background: #F0F0F0; padding: 0 4px; font-size: 11px; color: #333;
+  }
+  .row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+  .row label { min-width: 44px; color: #333; }
+  .ctl { border: 1px solid #7A7A7A; background: #fff; padding: 2px 6px; min-height: 20px; }
+  .ctl.combo { min-width: 70px; }
+  .ctl.btn { background: #E1E1E1; border: 1px solid #707070; padding: 3px 14px; cursor: default; }
+  .ctl.list { height: 150px; overflow: hidden; font-family: var(--mono); font-size: 11.5px; line-height: 1.65; padding: 4px 6px; }
+  .ctl.list .od { color: #B91C1C; font-weight: 700; }
+  .ctl.list .dn { color: #9CA3AF; }
+  .ctl.list .md { color: #1D4ED8; }
+  .ctl.list .empty { color: #9CA3AF; font-family: inherit; }
+  .overlap-tag {
+    font-family: var(--mono); font-size: 11px; background: var(--p0); color: #fff;
+    padding: 1px 6px; margin-left: 6px;
+  }
+  /* sticky mock */
+  .sticky { width: 240px; border: 1px solid #8a8a8a; font-size: 12px; font-family: "Microsoft YaHei UI", sans-serif; }
+  .sticky .sbar { height: 26px; display: flex; align-items: center; padding: 0 4px 0 8px; font-weight: 700; position: relative; overflow: hidden; white-space: nowrap; }
+  .sticky .sbody { background: #FFFACD; padding: 6px 8px; min-height: 60px; color: #333; }
+  .callout { font-size: 12.5px; color: #7C2D12; background: #FEF3C7; border: 1px solid #F59E0B; padding: 4px 10px; margin-top: 8px; font-family: var(--mono); }
+  .ok-note { font-size: 12.5px; color: #065F46; background: #D1FAE5; border: 1px solid #10B981; padding: 4px 10px; margin-top: 8px; font-family: var(--mono); }
+  footer.actions { max-width: 1080px; margin: 0 auto; padding: 0 32px 80px; }
+  table.plan { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--card); }
+  table.plan th, table.plan td { border: 1px solid var(--line); padding: 8px 12px; text-align: left; vertical-align: top; }
+  table.plan th { background: #F3F1EA; font-size: 13px; }
+  table.plan td:first-child { font-family: var(--mono); white-space: nowrap; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="kicker">Catime fork · UI/UX review · 2026-09-19</div>
+  <h1>TODO / 便签 / 同步：可用性评审</h1>
+  <p>范围：fork 上游后新增的四个 UI 表面——托盘 TODO 子菜单、任务列表对话框（780）、设置对话框（800）、桌面便签窗口。只评交互与呈现，不评同步协议本身。</p>
+  <p>方法：逐文件读实现（菜单构造、RC 坐标、绘制代码），按“5 秒测试 / 误触成本 / 状态可见性”三把尺子打分。P0 = 功能错或布局错，必须修；P1 = 会丢数据或让用户困惑；P2 =  polish。</p>
+</header>
+
+<div class="verdict">
+  <div class="cell"><b style="color:var(--p0)">3</b><span>P0 · 布局/语义错误</span></div>
+  <div class="cell"><b style="color:var(--p1)">6</b><span>P1 · 丢数据 / 困惑风险</span></div>
+  <div class="cell"><b style="color:var(--p2)">9</b><span>P2 · 层级 / 一致性打磨</span></div>
+  <div class="cell"><b>18</b><span>总计发现项</span></div>
+</div>
+
+<main>
+  <div class="filters" role="group" aria-label="按级别过滤">
+    <button data-f="all" aria-pressed="true">全部 18</button>
+    <button data-f="p0" aria-pressed="false">P0 · 3</button>
+    <button data-f="p1" aria-pressed="false">P1 · 6</button>
+    <button data-f="p2" aria-pressed="false">P2 · 9</button>
+  </div>
+
+  <!-- ============ A. 托盘 ============ -->
+  <section class="surface" id="tray">
+    <h2>A · 托盘 TODO 子菜单</h2>
+    <p class="sub">src/tray/tray_menu_todo.c — BuildTodoMenu / HandleTodoMenuRow</p>
+
+    <article class="finding" data-sev="p1">
+      <div class="fid"><span class="no">A1</span><span class="sev p1">P1</span><h3>Top5 行单击 = 直接标为完成，无确认、无撤销</h3><span class="effort">改约 10 行</span></div>
+      <p class="why">托盘菜单是误触最高发的表面（TPM_RETURNCMD 下，鼠标一滑一点即触发）。“完成”是一个 destructive 动作：它会写 todo.txt、记 updatedAt、下次 push 同步删除服务端任务。用户只是想看一眼任务，却可能点掉一个任务，且事后无任何反馈（菜单直接消失）。</p>
+      <p class="fix">单击行改为“打开任务列表并选中该行”（导航代替破坏），完成动作只保留在列表对话框和便签里。如果坚持菜单快捷完成，至少改成需要两次点击：第一次选中打勾，第二次确认。</p>
+    </article>
+
+    <article class="finding" data-sev="p2">
+      <div class="fid"><span class="no">A2</span><span class="sev p2">P2</span><h3>“New Task” 与 “Task List…” 同目的地</h3><span class="effort">改约 5 行</span></div>
+      <p class="why">CmdTodoNew 与 CmdTodoList 都只是 ShowTodoListDialog。两个菜单项、一个行为，用户会疑惑它们到底有什么区别（官能怀疑“New Task 是不是没生效”）。</p>
+      <p class="fix">二选一：删掉 “New Task”（列表里已有 Add 行）；或让 “New Task” 打开列表后直接聚焦标题输入框，做出真实差异。</p>
+    </article>
+
+    <article class="finding" data-sev="p2">
+      <div class="fid"><span class="no">A3</span><span class="sev p2">P2</span><h3>重要度符号 ‼ / ● 无图例、跨字体渲染不一致</h3><span class="effort">改约 5 行</span></div>
+      <p class="why">‼（U+203C）在部分菜单字体下回退到 emoji 字体，● 与正文灰度接近。用户无法从符号反推含义，且与列表对话框的 [!] / [ ] 体系不统一——同一产品两种语言。</p>
+      <p class="fix">统一用列表同款文字符号：高 [!]、中 [B]、低 [C]（或沿用 [ ] 三档粗细），纯文本、任何字体都稳定。</p>
+    </article>
+  </section>
+
+  <!-- ============ B. 任务列表 ============ -->
+  <section class="surface" id="list">
+    <h2>B · 任务列表对话框（IDD 780）</h2>
+    <p class="sub">resource/todo_dialog.rc + src/dialog/dialog_todo_list.c</p>
+
+    <div class="mock">
+      <div class="bar"><span>对照 mockup · 第二行过滤区（按 RC 真实坐标 1:1 还原）</span>
+        <span class="tabs"><button data-m="b-before" aria-pressed="true">现状</button><button data-m="b-after" aria-pressed="false">建议</button></span>
+      </div>
+      <div class="stage">
+        <div id="mock-b-before" class="win32" style="width:470px">
+          <div class="title">TODO</div>
+          <div class="body">
+            <div class="row"><label>Source:</label><span class="ctl combo">All ▾</span><label>Importance:</label><span class="ctl combo">Any ▾</span><span class="ctl btn">☐ Show done</span></div>
+            <div class="row" style="position:relative">
+              <label>Range:</label><span class="ctl combo" style="min-width:56px">Week ▾</span>
+              <span class="ctl" style="min-width:64px">&nbsp;</span><span class="ctl" style="min-width:64px">&nbsp;</span>
+              <label style="position:absolute;left:164px;top:2px;background:#F0F0F0;padding:0 2px">Done:<span class="overlap-tag">压住输入框</span></label>
+              <span class="ctl" style="min-width:64px">&nbsp;</span><span class="ctl" style="min-width:64px">&nbsp;</span>
+              <span class="ctl" style="min-width:94px;color:#999">&nbsp;</span>
+            </div>
+            <div class="callout">B1 · "Done:" 标签 x=172 与 Due-To 输入框 x=174 重叠 24px —— RC 坐标实测</div>
+          </div>
+        </div>
+        <div id="mock-b-after" class="win32" style="width:470px;display:none">
+          <div class="title">TODO</div>
+          <div class="body">
+            <div class="grp"><span class="legend">时间范围</span>
+              <div class="row"><span class="ctl combo">Week ▾</span><span class="ctl" style="min-width:64px;color:#999">从</span><span class="ctl" style="min-width:64px;color:#999">到</span><span style="color:#666;font-size:11px">Custom 时可改</span></div>
+            </div>
+            <div class="grp"><span class="legend">状态与搜索</span>
+              <div class="row"><span class="ctl combo">全部来源 ▾</span><span class="ctl combo">重要度 ▾</span><span class="ctl btn">☐ 含已完成</span><span class="ctl" style="min-width:120px;color:#999">关键词…</span></div>
+            </div>
+            <div class="ok-note">B2 · 三组 GROUPBOX；Done 范围并入 Custom；关键词带 cue；Sync/Settings 收进右上图标按钮</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <article class="finding" data-sev="p0">
+      <div class="fid"><span class="no">B1</span><span class="sev p0">P0</span><h3>“Done:” 标签压住 Due-To 输入框</h3><span class="effort">改 RC 2 行</span></div>
+      <p class="why">RC 实测：Due-To 输入框 x=174 w=64（174–238），“Done:” 标签 x=172 w=26（172–198）。重叠 24px，用户看到的是标签文字盖在输入框边框上。这是布局 bug，不是品味问题。</p>
+      <p class="fix">按上面 mockup 的分组方案重排：时间范围独立一行，Done 范围只在 Custom 模式出现，从根上消灭 6 组控件挤一行的局面。</p>
+    </article>
+
+    <article class="finding" data-sev="p1">
+      <div class="fid"><span class="no">B2</span><span class="sev p1">P1</span><h3>11 个过滤控件平铺、无分组，5 秒测试失败</h3><span class="effort">M · RC+ 逻辑约 60 行</span></div>
+      <p class="why">第一行 5 组、第二行 6 组，全部同字号同灰度。用户想切“本月”要先理解 Range/Scope/Due From/Due To 四个概念的关系。过滤器是此对话框最高频操作，却是全屏最难扫的一块。</p>
+      <p class="fix">GROUPBOX 分三组（时间范围 / 状态与搜索），Done 日期范围收进 Custom 模式；Scope 默认 Week 不变。控件总数不变，扫读成本降一半。</p>
+    </article>
+
+    <article class="finding" data-sev="p1">
+      <div class="fid"><span class="no">B3</span><span class="sev p1">P1</span><h3>日期框逐字重查：输入中途列表闪空</h3><span class="effort">改约 15 行</span></div>
+      <p class="why">EN_CHANGE 触发全量 RefreshList（含 qsort + LB_RESETCONTENT + selected=-1）。用户键入 “2026-0” 的中间态匹配不到任何行，列表闪空；每敲一键闪一次。关键词实时过滤是合理的，日期不是——日期是结构化输入，没有中间态价值。</p>
+      <p class="fix">日期框改失焦（EN_KILLFOCUS）+ 回车触发；关键词保留实时但加 200ms debounce。选择态 selected 不要在过滤刷新时无条件清零（保留同 id 选中）。</p>
+    </article>
+
+    <article class="finding" data-sev="p2">
+      <div class="fid"><span class="no">B4</span><span class="sev p2">P2</span><h3>行信息扁平：只有 High 可见，overdue 无标红，完成无置灰</h3><span class="effort">改约 20 行（LB 仍纯文本）</span></div>
+      <p class="why">行格式 “[x]/[!]/[ ] + 日期 + 标题”：Medium/Low 在行内零表达；overdue（ Gau 你排序最靠前的一批）与普通行视觉无差；已完成行与未完成行同色。用户扫列表回答不了“哪件最急”。</p>
+      <p class="fix">不换 owner-draw 也能做：overdue 行前缀 [!] + 标题保持（纯文本框无颜色时，至少 [!] 全覆盖高中低三档：[A]/[B]/[C]），完成行前缀 [x] 保持。等价于把 A3 的符号体系贯穿过来。</p>
+    </article>
+
+    <article class="finding" data-sev="p2">
+      <div class="fid"><span class="no">B5</span><span class="sev p2">P2</span><h3>Close 与 OK 同功能；新建 due 框无格式提示</h3><span class="effort">改约 10 行</span></div>
+      <p class="why">Modeless 对话框（CreateDialog）没有“确认/取消”语义：OK 与 Close 都是 DestroyWindow。两个按钮、一个行为（同 A2 的毛病）。另：Add 行的 due 输入框无标签无 cue，用户第一次用只能靠报错 “日期格式 YYYY-MM-DD？” 反推。</p>
+      <p class="fix">删掉 OK，只留 Close；due 框加 EM_SETCUEBANNER “YYYY-MM-DD”；关键词框加 cue “搜索标题…”（B7 的空状态一起做）。</p>
+    </article>
+
+    <article class="finding" data-sev="p2">
+      <div class="fid"><span class="no">B6</span><span class="sev p2">P2</span><h3>全英文硬编码，与托盘本地化脱节</h3><span class="effort">M · 走语言表</span></div>
+      <p class="why">Week/Month/Custom、All/Local/Sync、Low+/Medium+、Add/Done/Delete/Pin 全部 L"..." 硬编码，而托盘菜单走了 GetLocalizedString。中文用户看到托盘中文、对话框英文，中英混排。</p>
+      <p class="fix">统一走语言表（至少中英）。这是上游 fork 功能的通病：便签菜单也是 \u 硬编码（见 D7），建议一次扫完。</p>
+    </article>
+
+    <article class="finding" data-sev="p2">
+      <div class="fid"><span class="no">B7</span><span class="sev p2">P2</span><h3>空结果无提示</h3><span class="effort">改约 8 行</span></div>
+      <p class="why">过滤到零行时列表全白。用户分不清“同步失败没拉到”还是“本周确实没任务”——结合 B3 的闪空，体验是“列表老是莫名其妙变白”。</p>
+      <p class="fix">rowCount==0 时插一行禁用态占位 “（无匹配任务）”，并在同步未配置时提示 “未配置同步，仅显示本地”。</p>
+    </article>
+  </section>
+
+  <!-- ============ C. 设置 ============ -->
+  <section class="surface" id="settings">
+    <h2>C · 设置对话框（IDD 800）</h2>
+    <p class="sub">src/dialog/dialog_todo_settings.c — FillFromCurrent / CollectAndSave</p>
+
+    <article class="finding" data-sev="p1">
+      <div class="fid"><span class="no">C1</span><span class="sev p1">P1</span><h3>空 backend 时静默吞掉用户的 Enable 勾选</h3><span class="effort">改约 12 行</span></div>
+      <p class="why">CollectAndSave 里 `if (!url[0] || !token[0]) en = FALSE`：用户勾上 Enable、点 OK、再打开发现没勾上，全程零解释。用户会重复三次然后认定“这个开关是坏的”。这是典型的反馈缺失（ ski11 章：每个操作都要有可理解的结果）。</p>
+      <p class="fix">URL/Token 为空时直接 disable Enable 复选框，旁边附注 “填写 URL 与 Token 后可用”。把“事后吞掉”变成“事前说清”。</p>
+    </article>
+
+    <article class="finding" data-sev="p2">
+      <div class="fid"><span class="no">C2</span><span class="sev p2">P2</span><h3>同步状态全不可见；Sync Now 点完零反馈</h3><span class="effort">M · 状态行 + 缓存时间戳</span></div>
+      <p class="why">三个入口（托盘/列表/设置）都有 Sync Now，但点完之后：成功了？离线了？token 错了？用户只能凭“列表变没变”猜。做双向同步（冲突文件、tombstone、cursor）却不给状态出口，冲突快照落盘了用户也永远不知道。</p>
+      <p class="fix">设置对话框加一行状态文本：“上次同步 12:03 · 成功 / 失败（401）/ 离线”。有 conflict 文件时给一个按钮 “打开冲突目录”。托盘 TODO 标签旁可考虑追加 “(n)” 之外的同步点，但先做对话框这一处即可。</p>
+    </article>
+
+    <article class="finding" data-sev="p2">
+      <div class="fid"><span class="no">C3</span><span class="sev p2">P2</span><h3>同步区与便签区混排、无分隔</h3><span class="effort">改 RC 约 6 行</span></div>
+      <p class="why">“Sticky notes stay on top” checkbox 悬在 Sync Now 与 OK 之间，用户会误读为同步相关选项（“置顶同步？”）。对话框标题是 TODO Settings，里面装了两个不相关的域。</p>
+      <p class="fix">两个 GROUPBOX：“同步 (tweek)” / “桌面便签”。长远看便签选项增多（透明度？字号？）时再拆独立页，现在分组即够。</p>
+    </article>
+  </section>
+
+  <!-- ============ D. 便签 ============ -->
+  <section class="surface" id="sticky">
+    <h2>D · 桌面便签窗口</h2>
+    <p class="sub">src/todo/todo_stickies_window.c + render.c + rowmenu.c</p>
+
+    <div class="mock">
+      <div class="bar"><span>对照 mockup · 标题栏 26px 内的元素战争</span>
+        <span class="tabs"><button data-m="d-before" aria-pressed="true">现状</button><button data-m="d-after" aria-pressed="false">建议</button></span>
+      </div>
+      <div class="stage">
+        <div>
+          <div id="mock-d-before">
+            <div class="sticky">
+              <div class="sbar" style="background:#DC6E6E;color:#282828"><span>🍅 12:34 交电费<span style="font-weight:400">（标题从 x=8 起画，倒计时也从 x=8 起画）</span></span><span style="position:absolute;right:44px;color:#5a5a5a">[-]</span><span style="position:absolute;right:8px;color:#5a5a5a">x</span></div>
+              <div class="sbody">截止 2026-09-20</div>
+            </div>
+            <div class="callout">D1 · 标题与倒计时同一起点重叠；标题区 right-=30 但 glyph 占 70px；D2 · "x" 实为取消置顶</div>
+          </div>
+          <div id="mock-d-after" style="display:none">
+            <div class="sticky">
+              <div class="sbar" style="background:#DC6E6E;color:#282828"><span>[!] 交电费</span><span style="margin-left:auto;font-weight:400;font-size:11px">◉ · [-]</span></div>
+              <div class="sbody"><div style="color:#B91C1C;font-weight:700">🍅 剩余 12:34（番茄进行中）</div><div>截止 2026-09-20 · 双击标题栏收起</div></div>
+            </div>
+            <div class="ok-note">建议 · 倒计时下沉 body 首行；置顶态用 ◉/○ 表达；重要度 [!] 与列表统一；hint 轮换收起手势</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <article class="finding" data-sev="p0">
+      <div class="fid"><span class="no">D1</span><span class="sev p0">P0</span><h3>标题栏三处绘制重叠</h3><span class="effort">改 render 约 15 行</span></div>
+      <p class="why">render.c 实测：①标题文本区 `tr.right -= 30`，但右侧 glyph 实际占 [-]/[+]（~18px）+ x（26px）= 44px 起，标题长了会盖住 glyph；②番茄倒计时 `pr.left += 8` 与标题同一 x 起点，pomodoro 一启动两行字糊在一起（mockup 即现状截意）。26px 高的条子里塞了 4 个元素，没有分区。</p>
+      <p class="fix">标题区 right 收至 -74；倒计时移出标题栏、放到 body 首行（mockup 方案）；glyph 区固定 70px 右对齐。三处分区，互不侵入。</p>
+    </article>
+
+    <article class="finding" data-sev="p0">
+      <div class="fid"><span class="no">D2</span><span class="sev p0">P0</span><h3>右上 “x” 不是关闭，是取消置顶</h3><span class="effort">改约 10 行</span></div>
+      <p class="why">WM_LBUTTONDOWN 右上 26px → TodoSticky_SetPinned(FALSE)（隐藏窗口）。全平台约定里 x = 关闭/删除。用户点 x 想关掉便签，实际只是隐藏；更糟的是任务还 pin 着，下次 RestoreAll 又弹出来——“这玩意关不掉”。标签说谎比缺功能更伤信任。</p>
+      <p class="fix">x 改为图钉态表达：已置顶 “◉”、点击后变 “○”（仍隐藏，但符号诚实）+ tooltip “点击取消置顶”。或干脆去掉 x，收起/隐藏只走右键菜单（少一个误触源）。</p>
+    </article>
+
+    <article class="finding" data-sev="p1">
+      <div class="fid"><span class="no">D3</span><span class="sev p1">P1</span><h3>Delete 与 Unpin 相邻、无确认，且直通服务端删除</h3><span class="effort">改约 10 行</span></div>
+      <p class="why">右键菜单底部：取消置顶 / 删除任务上下相邻。Delete → Remove → todo.deleted → 下次 push 删服务端（tombstone）。一次手滑 = 本地+服务端双删，conflict 文件是唯一的后悔药，而用户不知道它的存在（见 S1）。</p>
+      <p class="fix">Delete 加确认框（MB_OKCANCEL，“将同时从服务端删除”写清后果）；或把 Delete 移入 “更多…” 二级。确认框在 Win32 上是 5 行代码，别省。</p>
+    </article>
+
+    <article class="finding" data-sev="p1">
+      <div class="fid"><span class="no">D4</span><span class="sev p1">P1</span><h3>折叠手势零可发现性</h3><span class="effort">改约 15 行</span></div>
+      <p class="why">双击标题栏收起、[-]/[+] 切换——没有任何 tooltip、hint、菜单之外的入口。Body 有 “双击编辑内容” 的 hint（好），但收起没有。用户永远发现不了，只能你口头教。</p>
+      <p class="fix">便签窗口加 tooltip（标题栏：“双击收起/展开”）；body hint 轮换两条（编辑 / 收起手势）；[-]/[+] glyph 加大点击热区感知（现有 18px 宽对触摸板用户偏小，至少视觉加粗）。</p>
+    </article>
+
+    <article class="finding" data-sev="p2">
+      <div class="fid"><span class="no">D5</span><span class="sev p2">P2</span><h3>右键菜单头缺任务锚点，7 项平铺</h3><span class="effort">改约 12 行</span></div>
+      <p class="why">第一项是超长的 “▶ 开始番茄（&lt;完整标题&gt;）”，标题一长菜单被撑宽，后面 6 项跟着遭殃。且用户点开菜单先看到的是动作，而不是“我正在对哪行操作”的确认。</p>
+      <p class="fix">菜单头加一条禁用灰项（任务标题截断 20 字，不可点），动作项精简为 “▶ 开始番茄”。顺序建议：标题（灰）/ 开始番茄 / 标为完成 / — / 展开·置顶·重命名 / — / 删除（垫底，与 D3 的确认框配合）。</p>
+    </article>
+
+    <article class="finding" data-sev="p2">
+      <div class="fid"><span class="no">D6</span><span class="sev p2">P2</span><h3>重要度只靠标题栏颜色，色盲用户无第二信号</h3><span class="effort">改约 6 行</span></div>
+      <p class="why">红/橙/绿/灰四色是唯一的 importance 通道（WCAG：不只用颜色传达状态）。红绿色盲用户分不清高 vs 低。</p>
+      <p class="fix">标题前加文字符号 [!] / [B] / [C]（与 A3/B4 同一体系），颜色保留给普通用户。绘制侧 6 行，体系三处统一。</p>
+    </article>
+
+    <article class="finding" data-sev="p2">
+      <div class="fid"><span class="no">D7</span><span class="sev p2">P2</span><h3>便签菜单中文 \u 硬编码（同 B6）</h3><span class="effort">M · 与 B6 一并走语言表</span></div>
+      <p class="why">rowmenu.c 全是 L"\u6807\u4e3a\u5b8c\u6210" 这类写法。英文系统用户看到中文菜单，中文用户在托盘看英文（A 系英文）——语言在三个表面之间是随机分布。</p>
+      <p class="fix">与 B6 同一批走 GetLocalizedString。排期上可以和 B6 合并为一个 “本地化补齐” 任务。</p>
+    </article>
+  </section>
+
+  <!-- ============ S. 跨端 ============ -->
+  <section class="surface" id="sync">
+    <h2>S · 跨端（C/S 视角）：冲突与状态没有 UI 出口</h2>
+    <p class="sub">todo_sync_merge.c / todo_task_sync — 协议已对，呈现缺席</p>
+
+    <article class="finding" data-sev="p1">
+      <div class="fid"><span class="no">S1</span><span class="sev p1">P1</span><h3>冲突快照只落盘，UI 零入口</h3><span class="effort">M · badge + 打开目录</span></div>
+      <p class="why">server-won 时本地 loser 写进 todo.txt.conflict-&lt;ts&gt;——然后呢？没有托盘提示、没有列表 badge、没有入口打开那个目录。从用户视角： “我改的字丢了，且没人告诉我”。双向同步里，冲突可视化与同步本身同等重要。</p>
+      <p class="fix">存在 conflict 文件时：托盘 TODO 标签加 “(!)” 后缀；任务列表顶部插一条提示行，点击打开文件所在目录。清掉文件即清 badge（下次启动/轮询检查）。</p>
+    </article>
+
+    <article class="finding" data-sev="p2">
+      <div class="fid"><span class="no">S2</span><span class="sev p2">P2</span><h3>同步连接态不可见（在线/离线/401/轮询中）</h3><span class="effort">M · 与 C2 合并做</span></div>
+      <p class="why">60s 轮询 + mtime 推送，全在后台线程。离线一周的用户以为在同步，token 过期的用户以为没任务。C/S 架构里“连接态”是桌面端的标配（想想 Dropbox 托盘图标的三态）。</p>
+      <p class="fix">与 C2 同一状态源：托盘菜单底加一条禁用灰字 “上次同步 12:03 · 正常”（失败则红字原因）。 merge 线程每次 poll 后写一个内存状态 + 时间戳，菜单构造时读。</p>
+    </article>
+  </section>
+</main>
+
+<footer class="actions">
+  <h2 style="font-size:20px;border-left:6px solid var(--ink);padding-left:12px">建议的动手顺序</h2>
+  <table class="plan">
+    <tr><th>批次</th><th>项</th><th>理由</th></tr>
+    <tr><td>P0 热修</td><td>B1、D1、D2</td><td>布局重叠与说谎标签，用户每天都会撞见；都在绘制/RC 层，风险小</td></tr>
+    <tr><td>P1 防丢</td><td>A1、D3、S1、C1</td><td>四个都是“数据消失且用户不知情”类；A1 + D3 加确认/改导航，S1 + C1 补反馈</td></tr>
+    <tr><td>P1 体验</td><td>B2、B3、D4</td><td>过滤器分组 + 输入时机 + 手势发现；做完列表和便签才算“能用得顺手”</td></tr>
+    <tr><td>P2 统一</td><td>A3、B4、D6（符号体系）、B6、D7（本地化）、B5、B7、C2、C3、D5、S2</td><td>符号/语言/状态的三线统一，适合一次扫完；可拆两批</td></tr>
+  </table>
+  <p style="color:var(--muted);font-size:13px">说明：符号体系（A3/B4/D6）与本地化（B6/D7）各建议合并为一个任务；C2 与 S2 共用同一状态源，一起做。Mockup 坐标按 RC 文件 1:1 还原，可直接对照实现。</p>
+</footer>
+
+<script>
+  document.querySelectorAll('.filters button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.filters button').forEach(function (b) { b.setAttribute('aria-pressed', 'false'); });
+      btn.setAttribute('aria-pressed', 'true');
+      var f = btn.getAttribute('data-f');
+      document.querySelectorAll('article.finding').forEach(function (a) {
+        a.classList.toggle('hidden', f !== 'all' && a.getAttribute('data-sev') !== f);
+      });
+    });
+  });
+  document.querySelectorAll('.mock .tabs button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var group = btn.getAttribute('data-m').split('-')[0];
+      document.querySelectorAll('.mock .tabs button').forEach(function (b) {
+        if (b.getAttribute('data-m').split('-')[0] === group) b.setAttribute('aria-pressed', 'false');
+      });
+      btn.setAttribute('aria-pressed', 'true');
+      var key = btn.getAttribute('data-m');
+      ['before', 'after'].forEach(function (s) {
+        var el = document.getElementById('mock-' + group + '-' + s);
+        if (el) el.style.display = (s === key.split('-')[1]) ? '' : 'none';
+      });
+    });
+  });
+</script>
+</body>
+</html>
