@@ -4,6 +4,26 @@ All notable changes to this fork (`aerostone/Catime`) are documented here.
 Upstream releases live under `vladelaina/Catime`; see that repository for
 history before the fork point.
 
+## [v1.6.10] - 2026-10-14
+
+便签卡片的溢出行、同步任务本的提示文字与一处占位符残留修复。
+
+### Fixed
+- 便签卡片底部的 “还有 N 项，双击打开列表” 提示带之前会被当作它上方那一行的
+  任务：单击选中错行、双击直接切换了错行的完成状态，而列表根本不会打开。
+  现在绘制与命中测试共用同一份布局计算（`BoardLayout_ComputeRows` /
+  `BoardLayout_HitRow`），提示带上方不再被任务行覆盖，点击提示带即打开
+  任务列表，悬停也不会高亮到别的行。
+- 在 tweek（同步任务本）上选中后直接点 “添加” 会真的新建一个标题为提示语
+  “在此新建将创建到 tweek（下次同步）” 的任务，并把这句话推送回 tweek。
+  提示语现在用 edit 的 cue banner（`EM_SETCUEBANNER`）展示，不再被写进
+  输入框内容，切换任务本也不会把它带过去。
+- 折叠便签的提示文字里残留了一个 `TODO` 标记（显示为 “点击展开TODO”）。
+
+### Changed
+- `EM_SETCUEBANNER` / `EM_SETCUEBANNER_W` 宏从 `dialog_todo_combos.c`
+  迁移到共享头 `dialog/dialog_todo_parts.h`，避免两个对话框各写一份。
+
 ## [v1.6.9] - 2026-09-22
 
 Editing a row now syncs back to tweek, both ways.

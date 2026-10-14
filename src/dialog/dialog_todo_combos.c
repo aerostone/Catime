@@ -12,13 +12,6 @@
 #include "language.h"
 #include "dialog/dialog_todo_parts.h"
 
-#ifndef EM_SETCUEBANNER
-#define EM_SETCUEBANNER (WM_USER + 1)
-#endif
-#ifndef EM_SETCUEBANNER_W
-#define EM_SETCUEBANNER_W EM_SETCUEBANNER
-#endif
-
 void TodoDlg_InitCombos(HWND hdlg) {
 
     HWND scope = GetDlgItem(hdlg, IDC_TODO_FILTER_DUE_SCOPE);

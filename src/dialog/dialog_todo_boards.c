@@ -46,8 +46,9 @@ void TodoDlg_GetBoard(HWND hdlg, char *out, size_t cap) {
 }
 
 /* The sync book is bidirectional now: its rows are editable and a new
- * task added here is created on tweek by the next push. The cue below just
- * states that, so the add row stays enabled on every book. */
+ * task added here is created on tweek by the next push. The hint below is
+ * a cue banner, never edit-box content: writing it as text made a stray
+ * 'Add' click create a task titled with the hint and push it to tweek. */
 static void SyncAddRowGate(HWND hdlg) {
     char b[TODO_STORE_BOARD_LEN];
     TodoDlg_GetBoard(hdlg, b, sizeof(b));
@@ -56,17 +57,12 @@ static void SyncAddRowGate(HWND hdlg) {
     EnableWindow(GetDlgItem(hdlg, IDC_TODO_NEW_DUE), TRUE);
     EnableWindow(GetDlgItem(hdlg, IDC_TODO_NEW_IMPORTANCE), TRUE);
     EnableWindow(GetDlgItem(hdlg, IDC_TODO_ADD_BUTTON), TRUE);
-    if (sync) {
-        wchar_t cur[TODO_STORE_TITLE_LEN];
-        GetDlgItemTextW(hdlg, IDC_TODO_NEW_EDIT, cur, _countof(cur));
-        if (!cur[0])
-            SetDlgItemTextW(hdlg, IDC_TODO_NEW_EDIT,
-                GetLocalizedString(
-                    L"\u5728\u6B64\u65B0\u5EFA\u5C06\u521B\u5EFA\u5230 tweek\uFF08\u4E0B\u6B21\u540C\u6B65\uFF09",
-                    L"New task here is created on tweek (next sync)"));
-    } else if (!GetWindowTextLengthW(GetDlgItem(hdlg, IDC_TODO_NEW_EDIT))) {
-        SetDlgItemTextW(hdlg, IDC_TODO_NEW_EDIT, L"");
-    }
+    SendDlgItemMessageW(hdlg, IDC_TODO_NEW_EDIT, EM_SETCUEBANNER_W, TRUE,
+        (LPARAM)(sync ? GetLocalizedString(
+            L"\u5728\u6B64\u65B0\u5EFA\u5C06\u521B\u5EFA\u5230 tweek\uFF08\u4E0B\u6B21\u540C\u6B65\uFF09",
+            L"New task here is created on tweek (next sync)")
+          : GetLocalizedString(L"\u65B0\u4EFB\u52A1\u6807\u9898",
+                               L"New task title")));
 }
 
 void TodoDlg_RefreshAddGate(HWND hdlg) { SyncAddRowGate(hdlg); }

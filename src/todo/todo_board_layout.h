@@ -27,8 +27,28 @@
 /* Filter row hit zones. */
 #define BOARD_HIT_SCOPE_W 60 /* leftmost 60px: week/all toggle */
 
-/* Task row index under a client-space y, or -1 outside the body. */
+/* Task row index under a client-space y, or -1 outside the body.
+ * This is the raw band index and knows nothing about how many rows were
+ * actually painted; use BoardLayout_HitRow for hit testing. */
 int BoardLayout_RowAt(int y);
 int BoardLayout_RowTop(int row);
+
+/* Layout decision for a card of client height cardH holding count tasks.
+ * Paint and hit testing both derive their geometry from this, so the
+ * painted '…还有 N 项' overflow band can never be mistaken for a task row. */
+typedef struct {
+    int painted;   /* leading tasks drawn as task rows */
+    int more;      /* tasks announced by the overflow band (0 = none) */
+    int bandTop;   /* overflow band top, valid only when band is TRUE */
+    int band;      /* nonzero when the overflow band is drawn at all */
+} BoardLayoutRows;
+
+BoardLayoutRows BoardLayout_ComputeRows(int cardH, int count);
+
+/* Hit test a client-space y in a card of client height cardH holding
+ * count tasks. more is set when the y landed on the overflow band, in
+ * which case row is -1.
+ * Returns the task row index, or -1 when the y is not a task row. */
+int BoardLayout_HitRow(int y, int cardH, int count, int *more);
 
 #endif /* CATIME_TODO_BOARD_LAYOUT_H */

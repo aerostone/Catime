@@ -209,13 +209,11 @@ void TodoBoard_PaintRowsEx(HDC hdc, const RECT *rc, const TodoTask *tasks,
                   DT_LEFT | DT_TOP | DT_SINGLELINE | DT_NOPREFIX);
         return;
     }
-    int more = 0; /* N2: rows that do not fit are announced, never cut */
-    for (int i = 0; i < count; i++) {
-        int top = BOARD_BODY_TOP + i * BOARD_ROW_H;
-        if (top + BOARD_ROW_H > rc->bottom && i > 0) {
-            more = count - i;
-            break;
-        }
+    /* N2: the same layout decision the WndProc hit-tests against, so the
+     * overflow band can never be mistaken for a task row. */
+    BoardLayoutRows lay = BoardLayout_ComputeRows(rc->bottom, count);
+    for (int i = 0; i < lay.painted; i++) {
+        int top = BoardLayout_RowTop(i);
         RECT rr = *rc;
         rr.top = top;
         rr.bottom = top + BOARD_ROW_H;
@@ -269,15 +267,15 @@ void TodoBoard_PaintRowsEx(HDC hdc, const RECT *rc, const TodoTask *tasks,
                       DT_RIGHT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
         }
     }
-    if (more > 0) {
+    if (lay.band && lay.more > 0) {
         RECT mr = *rc;
-        mr.top = rc->bottom - BOARD_ROW_H;
-        mr.bottom = rc->bottom;
+        mr.top = lay.bandTop;
+        mr.bottom = lay.bandTop + BOARD_ROW_H;
         if (mr.top >= BOARD_BODY_TOP) {
             SetTextColor(hdc, COL_DIM);
             wchar_t mm[64];
             _snwprintf_s(mm, 64, _TRUNCATE,
-                         L"\u2026\u8FD8\u6709 %d \u9879\uFF0C\u53CC\u51FB\u6253\u5F00\u5217\u8868", more);
+                         L"\u2026\u8FD8\u6709 %d \u9879\uFF0C\u53CC\u51FB\u6253\u5F00\u5217\u8868", lay.more);
             DrawTextW(hdc, mm, -1, &mr,
                       DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
         }

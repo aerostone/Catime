@@ -73,6 +73,10 @@ int TodoSticky_PomoRemainingFor(const char *board);
 int TodoSticky_RowIdAt(const char *board, int row, char *out, size_t cap);
 TodoImportance TodoSticky_PeakImportance(const char *board);
 int TodoSticky_RowCount(const char *board);
+/* N2: task row under a client-space y in this card, using the same layout
+ * the paint code used. *more is set when the y hit the overflow band, in
+ * which case the return is -1 (the band is not a task). */
+int TodoSticky_HitTaskRow(StickyWin *sw, int y, int *more);
 /* todo_sticky_rowmenu.c */
 void TodoSticky_ShowRowMenu(HWND hwnd, StickyWin *sw, int row);
 void TodoSticky_ShowCardMenu(HWND hwnd, StickyWin *sw);

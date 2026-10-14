@@ -144,7 +144,12 @@ LRESULT CALLBACK StickyProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             return 0;
         }
         /* N1: click selects; completion needs dblclick or the menu. */
-        int row = BoardLayout_RowAt(y);
+        int more = 0;
+        int row = TodoSticky_HitTaskRow(sw, y, &more);
+        if (more) {
+            OpenList(sw, FALSE); /* the band's promise */
+            return 0;
+        }
         if (row >= 0) {
             char id[TODO_STORE_ID_LEN] = "";
             if (TodoSticky_RowIdAt(sw->board, row, id, sizeof(id))) {
@@ -171,7 +176,7 @@ LRESULT CALLBACK StickyProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             int x = GET_X_LPARAM(lp), y = GET_Y_LPARAM(lp);
             (void)x;
             int row = (y > BOARD_BAR_H + BOARD_FILTER_H)
-                          ? BoardLayout_RowAt(y)
+                          ? TodoSticky_HitTaskRow(sw, y, NULL)
                           : -1;
             if (row != sw->hoverRow) {
                 sw->hoverRow = row;
@@ -231,10 +236,14 @@ LRESULT CALLBACK StickyProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
          * done, everywhere else dblclick is a no-op (fold button only). */
         if (!sw) break;
         int y = GET_Y_LPARAM(lp);
+        int more = 0;
         int row = (y > BOARD_BAR_H + BOARD_FILTER_H)
-                      ? BoardLayout_RowAt(y)
+                      ? TodoSticky_HitTaskRow(sw, y, &more)
                       : -1;
-        if (row >= 0) TodoSticky_ToggleSelected(sw);
+        if (more)
+            OpenList(sw, FALSE); /* N2: honour 'double-click opens list' */
+        else if (row >= 0)
+            TodoSticky_ToggleSelected(sw);
         return 0;
     }
     case WM_RBUTTONUP: {
@@ -246,8 +255,12 @@ LRESULT CALLBACK StickyProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         int y = GET_Y_LPARAM(lp);
         if (y <= BOARD_BAR_H + BOARD_FILTER_H)
             TodoSticky_ShowCardMenu(hwnd, sw);
-        else
-            TodoSticky_ShowRowMenu(hwnd, sw, BoardLayout_RowAt(y));
+        else {
+            /* A right-click on the overflow band has no task; the row menu
+             * falls back to the card menu for row < 0. */
+            int more = 0;
+            TodoSticky_ShowRowMenu(hwnd, sw, TodoSticky_HitTaskRow(sw, y, &more));
+        }
         return 0;
     }
     case WM_COMMAND:

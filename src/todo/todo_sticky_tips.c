@@ -53,7 +53,7 @@ void TodoSticky_UpdateTips(HWND hwnd, BOOL collapsed) {
         ti.rect.top = 0;
         ti.rect.right = rc.right;
         ti.rect.bottom = rc.bottom;
-        ti.lpszText = (LPWSTR)GetLocalizedString(L"\u70b9\u51fb\u5c55\u5f00TODO", L"Click to expand");
+        ti.lpszText = (LPWSTR)GetLocalizedString(L"\u70b9\u51fb\u5c55\u5f00", L"Click to expand");
         SendMessageW(tip, TTM_ADDTOOLW, 0, (LPARAM)&ti);
         SendMessageW(tip, TTM_SETMAXTIPWIDTH, 0, 300);
         SendMessageW(tip, TTM_ACTIVATE, TRUE, 0);

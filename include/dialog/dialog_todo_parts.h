@@ -13,6 +13,16 @@
 #include "todo/todo_store.h"
 #include "dialog/dialog_todo_list_state.h"
 
+/* EM_SETCUEBANNER with a Unicode string (Win7/commctrl.h spelling).
+ * Shared here because both dialog_todo_combos.c and dialog_todo_boards.c
+ * set placeholder text; putting it in one header avoids divergence. */
+#ifndef EM_SETCUEBANNER
+#define EM_SETCUEBANNER (WM_USER + 1)
+#endif
+#ifndef EM_SETCUEBANNER_W
+#define EM_SETCUEBANNER_W EM_SETCUEBANNER
+#endif
+
 void TodoDlg_ApplyScopeRange(TodoFilter *f);
 void TodoDlg_InitCombos(HWND hdlg);
 void TodoDlg_RefreshInto(HWND hdlg);
@@ -24,7 +34,8 @@ TodoDlgState *TodoDlg_State(void);
 void TodoDlg_InitBoardCombo(HWND hdlg);
 void TodoDlg_GetBoard(HWND hdlg, char *out, size_t cap);
 void TodoDlg_SyncStickyButton(HWND hdlg);
-/* L2: enable/disable the Add row (sync board is pull-only). */
+/* Keep the Add row enabled on every book; the tweek book is bidirectional
+ * and the hint is a cue banner, never edit content (see SyncAddRowGate). */
 void TodoDlg_RefreshAddGate(HWND hdlg);
 void TodoDlg_ApplyBoardFilter(HWND hdlg, TodoFilter *f);
 BOOL TodoDlg_BoardCommand(HWND hdlg, WORD id, WORD code);

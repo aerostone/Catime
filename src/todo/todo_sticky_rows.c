@@ -6,8 +6,10 @@
  * can never drift from what was painted (same filter, same order).
  */
 #include <string.h>
+#include <windows.h>
 
 #include "todo_board.h"
+#include "todo_board_layout.h"
 #include "todo_store.h"
 
 #include "todo_sticky_pomo.h"
@@ -55,4 +57,17 @@ int TodoSticky_RowIdAt(const char *board, int row, char *out, size_t cap) {
     if (row >= n) return 0;
     strcpy_s(out, cap, tasks[row].id);
     return 1;
+}
+
+/* N2: map a client-space y onto a task row using the same layout the paint
+ * code used. more is set when the y landed on the overflow band, whose
+ * label promises 'double-click opens the list' and which must never be
+ * mistaken for the task row painted above it. */
+int TodoSticky_HitTaskRow(StickyWin *sw, int y, int *more) {
+    RECT rc;
+    if (more) *more = 0;
+    if (!sw || !sw->hwnd || sw->collapsed) return -1;
+    GetClientRect(sw->hwnd, &rc);
+    return BoardLayout_HitRow(y, rc.bottom, TodoSticky_RowCount(sw->board),
+                              more);
 }
