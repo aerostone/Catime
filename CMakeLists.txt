@@ -22,6 +22,7 @@ project(Catime VERSION
 )
 include(cmake/CatimePureC.cmake)
 include(cmake/CatimeSourceLayout.cmake)
+include(cmake/CatimeRcLayout.cmake)
 include(cmake/CatimeInteractionSafety.cmake)
 
 configure_file(

@@ -5,13 +5,22 @@
  * Layout contracts (dialog units, 96-DPI base):
  * - list dialog 470x330: filter row y=2..40 split into two GROUPBOXes
  *   (time scope x=4..254, state/search x=258..466) so no label overlaps an
- *   input; task list y=46..252; add row y=256..270; action row y=278..292;
- *   board row y=299..313: Board combo + ... manage menu + Sticky
- *   toggle (Close right-aligned at x=412).
- * - boards dialog 300x250: task-book list + New/Rename/Del/Show +
- *   sync status + Sync Now + Settings (RD3).
+ *   input; task list y=46..252; add row y=256..270 (title edit, due picker,
+ *   importance combo and Add share y=256/h=14 so they are vertically
+ *   centred with each other, laid out at 4-DU gaps with no overlap);
+ *   action row y=278..292;
+ *   board row y=299..313: Board combo + ... manage menu (4-DU gap) +
+ *   Sticky toggle (4-DU gap), all h=14 on y=299 with the centered label
+ *   beside them; Close right-aligned at x=412.
+ * - boards dialog 300x206: task-book list y=18..102 + New/Rename/Del/Show
+ *   stacked at x=196 with a uniform 4-DU gap (y=18/36/54/72), sync-book
+ *   label y=108, combo y=120, status y=142, Sync Now/Settings y=158 at a
+ *   4-DU gap, Close right-aligned at y=184 (groupbox ends y=176, so no
+ *   dead band between the panel and the buttons) (RD3).
  * - settings dialog 300x232: sync GROUPBOX y=4..142, sticky GROUPBOX
- *   y=146..204, buttons y=210..224. UiDebug dump tags: "todo-list"/"todo-settings".
+ *   y=146..204, buttons y=210..224. All edits are h=14 so they bottom-align
+ *   with the adjacent Sync Now button on the same row, and with every other
+ *   text field in the TODO dialogs. UiDebug dump tags: "todo-list"/"todo-settings".
  */
 #include "resource.h"
 #include <windows.h>
@@ -30,29 +39,29 @@ BEGIN
     COMBOBOX    IDC_TODO_FILTER_SOURCE, 264, 14, 62, 60, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     COMBOBOX    IDC_TODO_FILTER_IMPORTANCE, 330, 14, 62, 60, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     CONTROL     "Done", IDC_TODO_SHOW_DONE, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 396, 14, 56, 12
-    EDITTEXT    IDC_TODO_FILTER_KEYWORD, 264, 28, 128, 11, ES_AUTOHSCROLL
+    EDITTEXT    IDC_TODO_FILTER_KEYWORD, 264, 28, 128, 12, ES_AUTOHSCROLL
     EDITTEXT    IDC_TODO_FILTER_DONE_FROM, 396, 28, 0, 0, ES_AUTOHSCROLL | NOT WS_VISIBLE
     EDITTEXT    IDC_TODO_FILTER_DONE_TO, 396, 28, 0, 0, ES_AUTOHSCROLL | NOT WS_VISIBLE
     LISTBOX     IDC_TODO_LIST_VIEW, 8, 46, 454, 206, LBS_NOTIFY | WS_VSCROLL | WS_BORDER | WS_TABSTOP
-    EDITTEXT    IDC_TODO_NEW_EDIT, 8, 258, 200, 12, ES_AUTOHSCROLL
+    EDITTEXT    IDC_TODO_NEW_EDIT, 8, 256, 200, 14, ES_AUTOHSCROLL
     CONTROL     "", IDC_TODO_NEW_DUE, "SysDateTimePick32",
                 DTS_SHORTDATECENTURYFORMAT | DTS_SHOWNONE | WS_TABSTOP,
                 212, 256, 84, 14
-    COMBOBOX    IDC_TODO_NEW_IMPORTANCE, 280, 258, 60, 60, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
-    PUSHBUTTON  "Add", IDC_TODO_ADD_BUTTON, 344, 256, 40, 14
+    COMBOBOX    IDC_TODO_NEW_IMPORTANCE, 300, 256, 60, 60, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON  "Add", IDC_TODO_ADD_BUTTON, 364, 256, 40, 14
     PUSHBUTTON  "Done", IDC_TODO_DONE_BUTTON, 8, 278, 50, 14
     PUSHBUTTON  "Delete", IDC_TODO_DELETE_BUTTON, 62, 278, 50, 14
     PUSHBUTTON  "Save", IDC_TODO_SAVE_BUTTON, 116, 278, 50, 14
     PUSHBUTTON  "Sync now", IDC_TODO_SYNC_NOW_BTN, 170, 278, 70, 14
     PUSHBUTTON  "Settings...", IDC_TODO_SETTINGS_BTN, 244, 278, 64, 14
-    LTEXT       "Board:", CLOCK_IDC_STATIC, 8, 304, 28, 10
-    COMBOBOX    IDC_TODO_BOARD_SEL, 38, 300, 150, 90, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
-    PUSHBUTTON  "...", IDC_TODO_BOARD_MORE, 192, 299, 30, 13
-    PUSHBUTTON  "Sticky", IDC_TODO_BOARD_SHOW, 226, 299, 50, 13
+    LTEXT       "Board:", CLOCK_IDC_STATIC, 8, 301, 28, 10
+    COMBOBOX    IDC_TODO_BOARD_SEL, 38, 299, 150, 90, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON  "...", IDC_TODO_BOARD_MORE, 192, 299, 30, 14
+    PUSHBUTTON  "Sticky", IDC_TODO_BOARD_SHOW, 226, 299, 50, 14
     PUSHBUTTON  "Close", IDCANCEL, 412, 299, 50, 14
 END
 
-IDD_TODO_BOARDS_DIALOG DIALOGEX 0, 0, 300, 250
+IDD_TODO_BOARDS_DIALOG DIALOGEX 0, 0, 300, 206
 STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "TODO"
 FONT 9, "Microsoft YaHei UI"
@@ -62,13 +71,13 @@ BEGIN
     PUSHBUTTON  "New", IDC_TODO_BOOK_NEW, 196, 18, 94, 14
     PUSHBUTTON  "Rename", IDC_TODO_BOOK_RENAME, 196, 36, 94, 14
     PUSHBUTTON  "Del", IDC_TODO_BOOK_DEL, 196, 54, 94, 14
-    PUSHBUTTON  "Show panel", IDC_TODO_BOOK_SHOW, 196, 76, 94, 14
+    PUSHBUTTON  "Show panel", IDC_TODO_BOOK_SHOW, 196, 72, 94, 14
     LTEXT       "Sync book (tweek):", CLOCK_IDC_STATIC, 10, 108, 100, 10
     COMBOBOX    IDC_TODO_BOOK_SYNC_CAL, 10, 120, 180, 90, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     LTEXT       "", IDC_TODO_BOOK_STATUS, 10, 142, 280, 14
     PUSHBUTTON  "Sync Now", IDC_TODO_BOOK_SYNC_NOW, 10, 158, 70, 14
-    PUSHBUTTON  "Settings...", IDC_TODO_BOOK_SETTINGS, 86, 158, 70, 14
-    DEFPUSHBUTTON "Close", IDOK, 240, 228, 50, 14
+    PUSHBUTTON  "Settings...", IDC_TODO_BOOK_SETTINGS, 84, 158, 70, 14
+    DEFPUSHBUTTON "Close", IDOK, 240, 184, 50, 14
 END
 
 IDD_TODO_SETTINGS_DIALOG DIALOGEX 0, 0, 300, 232
@@ -80,11 +89,11 @@ BEGIN
     CONTROL     "Enable sync (tweek backend)", IDC_TODO_SYNC_ENABLE, "Button",
                 BS_AUTOCHECKBOX | WS_TABSTOP, 10, 18, 200, 12
     LTEXT       "Server URL:", CLOCK_IDC_STATIC, 10, 34, 60, 10
-    EDITTEXT    IDC_TODO_SYNC_URL, 10, 46, 280, 12, ES_AUTOHSCROLL
+    EDITTEXT    IDC_TODO_SYNC_URL, 10, 46, 280, 14, ES_AUTOHSCROLL
     LTEXT       "Token:", CLOCK_IDC_STATIC, 10, 62, 60, 10
-    EDITTEXT    IDC_TODO_SYNC_TOKEN, 10, 74, 280, 12, ES_PASSWORD | ES_AUTOHSCROLL
+    EDITTEXT    IDC_TODO_SYNC_TOKEN, 10, 74, 280, 14, ES_PASSWORD | ES_AUTOHSCROLL
     LTEXT       "Poll interval (15-600s):", CLOCK_IDC_STATIC, 10, 92, 120, 10
-    EDITTEXT    IDC_TODO_SYNC_POLL, 10, 104, 60, 12, ES_NUMBER
+    EDITTEXT    IDC_TODO_SYNC_POLL, 10, 104, 60, 14, ES_NUMBER
     PUSHBUTTON  "Sync Now", IDC_TODO_SETTINGS_SYNC_BTN, 80, 104, 60, 14
     LTEXT       "", IDC_TODO_SYNC_STATUS, 150, 104, 140, 14
     PUSHBUTTON  "Conflicts...", IDC_TODO_CONFLICT_BTN, 150, 120, 70, 14

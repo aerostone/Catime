@@ -4,6 +4,36 @@ All notable changes to this fork (`aerostone/Catime`) are documented here.
 Upstream releases live under `vladelaina/Catime`; see that repository for
 history before the fork point.
 
+## [v1.6.11] - 2026-10-19
+
+任务本管理的入口失效、TODO 对话框的控件错位，以及两类回归的自动门禁。
+
+### Fixed
+- 托盘菜单里的 **“任务本管理…”** 和 **“显示全部任务本”** 点了没有任何反应。
+  根因是命令 ID 撞号：`CLOCK_IDM_TODO_BOARDS` 被定义成 151，与既有的
+  `CLOCK_IDM_24HOUR_FORMAT` 相同；命令分发是一张线性表、取第一个命中项，
+  于是这两个点击都落在了 24 小时制切换上。已改用 170 / 169。
+- TODO 列表对话框“添加行”的标题输入框、截止日期选择器和重要程度下拉框
+  高度与纵坐标各不相同（12/14/12 与 258/256/258），日期控件还与下拉框横向
+  重叠 16 个对话框单位。现在四者统一 y=256、h=14，间距 4 个单位、互不重叠。
+- 任务本对话框底部的按钮行间距不一致（6/8 个单位混用），且对话框比内容高
+  出 52 个单位形成大片空白；已统一为 4 个单位间距并把高度从 250 收到 206。
+- 设置对话框的 URL / Token / 轮询间隔输入框高度为 12，与同一行 h=14 的
+  按钮底边错开 2 个单位；已统一为 14。
+
+### Added
+- `tools/rc_layout_lint.py`：离线检查 `.rc` 对话框几何，报出同行纵坐标不一致、
+  同行高度不一致、控件重叠、越出对话框边界和底部空白。
+- `cmake/CatimeRcLayout.cmake`：把上述检查接进 CMake 配置阶段，几何退化的
+  对话框直接让构建失败，而不是等到肉眼在界面上发现。
+- `.github/scripts/ci/check_command_ids.py`：拦截命令 ID 撞号。只检查
+  `CLOCK_IDM_*`（`CLOCK_IDC_*` 是各对话框私有的控件 ID，跨对话框复用是合法的），
+  并额外校验命令分发表内部没有重复项，已接入 `build.yml` 的 `source-policy` 作业。
+
+### Changed
+- 说明：门禁为 `.rc` 中运行时重排的对话框（关于、通知、颜色选择器）保留跳过名单，
+  它们的坐标只是初始值，真值在窗口初始化时计算，误报已在跳过名单中说明。
+
 ## [v1.6.10] - 2026-10-14
 
 便签卡片的溢出行、同步任务本的提示文字与一处占位符残留修复。

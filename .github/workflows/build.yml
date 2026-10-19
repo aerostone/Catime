@@ -46,6 +46,9 @@ jobs:
       - name: Reject risky source patterns
         run: python3 .github/scripts/ci/check_source_security.py
 
+      - name: Reject duplicate command ids
+        run: python3 .github/scripts/ci/check_command_ids.py
+
   codeql:
     name: quality / codeql
     runs-on: ubuntu-latest
