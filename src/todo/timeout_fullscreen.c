@@ -2,12 +2,19 @@
  * @file timeout_fullscreen.c
  * @brief Fullscreen dim + centered big-text timeout alert.
  *
- * Layout: fullscreen dim window (all monitors: union of monitor rects) at 70%
- * black opacity, layered; center card ~min(720px, 80%w) x auto, white rounded
- * look via plain rect + big fonts:
+ * Layout: dim window covering ONE monitor (the one under the cursor, else the
+ * primary) at 70% black opacity, layered; center card ~min(720px, 80%w) x auto,
+ * white rounded look via plain rect + big fonts:
  *   title   44px bold Microsoft YaHei (wraps, centered)
  *   message 24px regular (wraps, centered)
  *   hint    15px gray "任意键 / 点击关闭" (centered)
+ *
+ * Multi-monitor note: the dim/card geometry is deliberately derived from a
+ * single monitor rect, never the union of all monitors. With two screens side
+ * by side the union is twice as wide, so a card centered on the union lands on
+ * the seam and both screens show half the text. Anchoring to one monitor keeps
+ * the whole alert readable on a single screen.
+ *
  * Dismiss: WM_KEYDOWN anywhere, WM_LBUTTONDOWN anywhere, WM_TIMER timeout,
  * or TimeoutFullscreen_Dismiss(). ESC also works.
  */
@@ -16,6 +23,7 @@
 #include <string.h>
 
 #include "todo/timeout_fullscreen.h"
+#include "todo/timeout_fullscreen_geom.h"
 #include "config.h"
 
 #define TFS_CLASS_DIM L"CatimeTimeoutDimClass"
@@ -62,21 +70,6 @@ static void FreeFonts(void) {
     if (g_fTitle) { DeleteObject(g_fTitle); g_fTitle = NULL; }
     if (g_fMsg) { DeleteObject(g_fMsg); g_fMsg = NULL; }
     if (g_fHint) { DeleteObject(g_fHint); g_fHint = NULL; }
-}
-
-typedef struct { RECT rc; } MonitorUnion;
-static BOOL CALLBACK UnionMonitors(HMONITOR h, HDC dc, LPRECT r, LPARAM p) {
-    (void)h; (void)dc;
-    MonitorUnion *u = (MonitorUnion *)p;
-    if (u->rc.left == 0 && u->rc.top == 0 && u->rc.right == 0 && u->rc.bottom == 0) {
-        u->rc = *r;
-    } else {
-        if (r->left < u->rc.left) u->rc.left = r->left;
-        if (r->top < u->rc.top) u->rc.top = r->top;
-        if (r->right > u->rc.right) u->rc.right = r->right;
-        if (r->bottom > u->rc.bottom) u->rc.bottom = r->bottom;
-    }
-    return TRUE;
 }
 
 static LRESULT CALLBACK DimProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
@@ -236,17 +229,21 @@ void TimeoutFullscreen_Show(HWND hwndOwner, const wchar_t *title, const wchar_t 
         return;
     }
 
-    MonitorUnion u;
-    memset(&u, 0, sizeof(u));
-    EnumDisplayMonitors(NULL, NULL, UnionMonitors, (LPARAM)&u);
-    int fw = u.rc.right - u.rc.left;
-    int fh = u.rc.bottom - u.rc.top;
-    if (fw <= 0 || fh <= 0) { fw = GetSystemMetrics(SM_CXSCREEN); fh = GetSystemMetrics(SM_CYSCREEN); u.rc.left = 0; u.rc.top = 0; }
+    RECT u = {0};
+    TimeoutFullscreen_PickMonitorRect(&u);
+    int fw = u.right - u.left;
+    int fh = u.bottom - u.top;
+    if (fw <= 0 || fh <= 0) {
+        fw = GetSystemMetrics(SM_CXSCREEN);
+        fh = GetSystemMetrics(SM_CYSCREEN);
+        u.left = 0;
+        u.top = 0;
+    }
 
     g_dim = CreateWindowExW(WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TOOLWINDOW,
                             TFS_CLASS_DIM, L"Catime Timeout",
                             WS_POPUP | WS_VISIBLE,
-                            u.rc.left, u.rc.top, fw, fh,
+                            u.left, u.top, fw, fh,
                             hwndOwner, NULL, hInst, NULL);
     if (!g_dim) { InterlockedExchange(&g_showing, 0); return; }
     SetLayeredWindowAttributes(g_dim, 0, g_fsAlpha, LWA_ALPHA);
@@ -261,8 +258,11 @@ void TimeoutFullscreen_Show(HWND hwndOwner, const wchar_t *title, const wchar_t 
     int chh = 36 + th + 20 + mh + 60;
     if (chh < 220) chh = 220;
     if (chh > fh - 80) chh = fh - 80;
-    int cx = u.rc.left + (fw - cw) / 2;
-    int cy = u.rc.top + (fh - chh) / 2;
+    /* The card is a WS_POPUP window: its hWndParent argument becomes the OWNER
+     * and its x/y stay in screen coordinates, so the monitor origin must be
+     * added back to center it on the alert monitor. */
+    int cx = u.left + (fw - cw) / 2;
+    int cy = u.top + (fh - chh) / 2;
     g_card = CreateWindowExW(WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
                              L"CatimeTimeoutCardClass", L"",
                              WS_POPUP | WS_VISIBLE,

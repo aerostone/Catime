@@ -4,6 +4,22 @@ All notable changes to this fork (`aerostone/Catime`) are documented here.
 Upstream releases live under `vladelaina/Catime`; see that repository for
 history before the fork point.
 
+## [v1.6.13] - 2026-10-20
+
+番茄钟/超时提醒的全屏遮罩在多显示器下跨屏，文字只看到一半。
+
+### Fixed
+- 多显示器环境下，超时提醒与番茄钟结束的遮罩层原来按 **所有显示器的并集** 铺开，
+  卡片再在并集里居中 —— 于是两屏并排时卡片正好落在屏幕交界处，左边一半、右边
+  一半，两边都只能看到半句话。现在改为只锚定 **一块屏**：优先光标所在的那块
+  （用户正看着的地方），取不到就用主屏，最后才退化到整个虚拟桌面。
+- 遮罩铺满所选屏幕、卡片在其中居中，整段文字始终在同一块屏上可读。
+
+### Changed
+- 显示器选择逻辑拆到 `src/todo/timeout_fullscreen_geom.c`，与绘制代码分开，
+  两边都保持在 300 行门禁内；首次选择显示器时屏幕坐标偏移也做了显式说明
+  （卡片是 `WS_POPUP`，坐标是屏幕坐标而非父窗口客户坐标）。
+
 ## [v1.6.12] - 2026-10-20
 
 拉动便签任务面板窗口大小后出现残影，必须把鼠标移上去才刷新。
