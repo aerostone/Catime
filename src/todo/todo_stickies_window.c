@@ -116,6 +116,10 @@ LRESULT CALLBACK StickyProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                 TodoBoard_SaveGeom(sw->board, wr.left, wr.top,
                                    wr.right - wr.left, wr.bottom - wr.top);
             }
+            /* A resize exposes a band of never-painted surface; the paint
+             * pass is self-contained, so invalidating the whole client
+             * area is what actually clears the ghosting. */
+            InvalidateRect(hwnd, NULL, FALSE);
         }
         return 0;
     case WM_MOVE:

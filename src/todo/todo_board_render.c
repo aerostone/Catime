@@ -131,6 +131,10 @@ void TodoBoard_PaintDot(HDC hdc, const RECT *rc, TodoImportance peak,
                         int openCount) {
     COLORREF fill;
     TodoBoard_BarColor(peak, FALSE, &fill);
+    /* Same self-contained-paint rule as the rows: the dot is a square
+     * window, so clear the corners instead of leaving old card pixels. */
+    HBRUSH bg = CreateSolidBrush(COL_BODY);
+    if (bg) { FillRect(hdc, rc, bg); DeleteObject(bg); }
     HBRUSH b = CreateSolidBrush(fill);
     HPEN pen = CreatePen(PS_SOLID, 2, COL_LINE);
     HBRUSH oldB = NULL;
@@ -200,6 +204,15 @@ void TodoBoard_PaintRowsEx(HDC hdc, const RECT *rc, const TodoTask *tasks,
                            int hoverRow) {
     SetBkMode(hdc, TRANSPARENT);
     SetFont(hdc, fBody);
+    /* Self-contained paint: the card is a layered window and repaints with
+     * bErase = FALSE, so every cell of the body must be refilled here or a
+     * resize leaves stale pixels behind as a ghost image. */
+    RECT body = *rc;
+    body.top = BOARD_BODY_TOP;
+    if (body.bottom > body.top) {
+        HBRUSH bb = CreateSolidBrush(COL_BODY);
+        if (bb) { FillRect(hdc, &body, bb); DeleteObject(bb); }
+    }
     if (count <= 0) {
         RECT e = *rc;
         e.top = BOARD_BODY_TOP + 8;

@@ -4,6 +4,21 @@ All notable changes to this fork (`aerostone/Catime`) are documented here.
 Upstream releases live under `vladelaina/Catime`; see that repository for
 history before the fork point.
 
+## [v1.6.12] - 2026-10-20
+
+拉动便签任务面板窗口大小后出现残影，必须把鼠标移上去才刷新。
+
+### Fixed
+- 拉伸/缩小任务面板窗口时出现「残影」：窗口变大后新露出的区域保留着旧像素，
+  鼠标划过才恢复。两个原因叠加：
+  1. 卡片是分层窗口（`WS_EX_LAYERED` + `LWA_ALPHA`），而重绘用的是
+     `InvalidateRect(hwnd, NULL, FALSE)`（bErase = FALSE），不会擦背景；
+     同时任务行绘制只画了标题栏、过滤行和奇数行的浅色条纹，卡片主体底色
+     `COL_BODY` 从未被填充过 —— 于是没画到的像素原样留在屏幕上。
+  2. `WM_SIZE` 只保存几何、不失效重绘，窗口尺寸变化后完全没有触发重绘。
+  现在任务行与最小化圆点两处绘制都会自己铺满自己的矩形（不再依赖外部先擦
+  背景），并在 `WM_SIZE` 中失效整个客户区，残影随之消失。
+
 ## [v1.6.11] - 2026-10-19
 
 任务本管理的入口失效、TODO 对话框的控件错位，以及两类回归的自动门禁。
